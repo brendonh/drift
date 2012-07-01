@@ -1,27 +1,25 @@
 package drift
 
 import (
-    "fmt"
-	"strings"
 	"bytes"
-	"reflect"
 	"encoding/json"
-    "net/http"
+	"fmt"
 	"io/ioutil"
+	"net/http"
+	"reflect"
+	"strings"
 
-    "github.com/ugorji/go-msgpack"
+	"github.com/ugorji/go-msgpack"
 )
 
 type RiakClient struct {
-	httpc *http.Client
+	httpc   *http.Client
 	baseURL string
 }
-
 
 type Storable interface {
 	StorageKey() string
 }
-
 
 func NewClient(baseURL string) *RiakClient {
 	c := new(RiakClient)
@@ -29,7 +27,6 @@ func NewClient(baseURL string) *RiakClient {
 	c.baseURL = baseURL
 	return c
 }
-
 
 func (client *RiakClient) Get(obj Storable) bool {
 	structName := reflect.TypeOf(obj).Elem().Name()
@@ -52,7 +49,7 @@ func (client *RiakClient) GetKey(bucket string, key string, target interface{}) 
 	body, _ := ioutil.ReadAll(resp.Body)
 	err := msgpack.Unmarshal(body, &target, nil)
 
-	if (err != nil) {
+	if err != nil {
 		fmt.Printf("Decode err: %#v\n", err)
 		return false
 	}
@@ -60,16 +57,14 @@ func (client *RiakClient) GetKey(bucket string, key string, target interface{}) 
 	return true
 }
 
-
 func (client *RiakClient) Put(obj Storable) bool {
 	structName := reflect.TypeOf(obj).Elem().Name()
 	return client.PutKey(structName, obj.StorageKey(), obj)
 }
 
-
 func (client *RiakClient) PutNew(bucket string, val interface{}) (string, bool) {
 	resp, ok := client.putRaw(bucket, "", val)
-	if (!ok) {
+	if !ok {
 		return "", false
 	}
 
@@ -78,12 +73,10 @@ func (client *RiakClient) PutNew(bucket string, val interface{}) (string, bool) 
 	return location[lastSlash+1:], true
 }
 
-
 func (client *RiakClient) PutKey(bucket string, key string, val interface{}) bool {
 	_, ok := client.putRaw(bucket, key, val)
 	return ok
 }
-
 
 func (client *RiakClient) Keys(bucket string) ([]string, bool) {
 	url := strings.Join([]string{client.baseURL, "buckets", bucket, "keys"}, "/") +
@@ -111,7 +104,6 @@ func (client *RiakClient) Keys(bucket string) ([]string, bool) {
 	return result.Keys, true
 }
 
-
 func (client *RiakClient) Delete(bucket string, key string) bool {
 	url := client.buildURL(bucket, key)
 	req, err := http.NewRequest("DELETE", url, nil)
@@ -131,15 +123,14 @@ func (client *RiakClient) Delete(bucket string, key string) bool {
 }
 
 type keyList struct {
-	Keys []string `json:"keys"`	
+	Keys []string `json:"keys"`
 }
-
 
 func (client *RiakClient) putRaw(bucket string, key string, val interface{}) (*http.Response, bool) {
 
 	w := bytes.NewBufferString("")
 	enc := msgpack.NewEncoder(w)
-    err := enc.Encode(val)
+	err := enc.Encode(val)
 
 	if err != nil {
 		fmt.Printf("Err: %#v\n", err)
@@ -160,7 +151,7 @@ func (client *RiakClient) putRaw(bucket string, key string, val interface{}) (*h
 
 	defer resp.Body.Close()
 
-	if (resp.StatusCode / 100 != 2) {
+	if resp.StatusCode/100 != 2 {
 		fmt.Printf("Status: %d\n", resp.StatusCode)
 
 		body, _ := ioutil.ReadAll(resp.Body)
@@ -172,7 +163,6 @@ func (client *RiakClient) putRaw(bucket string, key string, val interface{}) (*h
 
 }
 
-
 func (client *RiakClient) getRaw(url string) (*http.Response, bool) {
 	req, err := http.NewRequest("GET", url, nil)
 	resp, err := client.httpc.Do(req)
@@ -182,7 +172,7 @@ func (client *RiakClient) getRaw(url string) (*http.Response, bool) {
 		return nil, false
 	}
 
-	if (resp.StatusCode != 200) {
+	if resp.StatusCode != 200 {
 		fmt.Printf("Status: %d\n", resp.StatusCode)
 		return nil, false
 	}
