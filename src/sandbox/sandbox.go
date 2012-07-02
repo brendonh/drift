@@ -1,7 +1,7 @@
 package main
 
 import (
-	"drift"
+	"drift/storage"
 	"fmt"
 )
 
@@ -15,7 +15,7 @@ func (sector *Sector) StorageKey() string {
 }
 
 func main() {
-	client := drift.NewClient("http://localhost:8098")
+	client := drift.NewRiakClient("http://localhost:8098")
 
 	sector := Sector{0, 1, "Away"}
 
