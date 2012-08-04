@@ -12,46 +12,47 @@ function setup() {
             };
     })();
 
+    var canvas = $('#box').get(0);
+
+    var scene = new THREE.Scene();
+
+    var camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
+    camera.position.z = 1000;
+    scene.add( camera );
+
+    // var geometry = new THREE.CubeGeometry( 
+    //     200, 200, 200,
+    //     undefined, undefined, undefined,
+    //     undefined,
+    //     {nz: false}
+    // );
+
+    var geometry = new CubeSet().toGeometry();
+
+    var material = new THREE.MeshBasicMaterial( { color: 0x999999 } );
+    
+    var mesh = new THREE.Mesh( geometry, material );
+    scene.add( mesh );
+    
+    var renderer = new THREE.CanvasRenderer({'canvas': canvas});
+    renderer.setSize( 800, 600 );
+    
     state = {
         'frames': 0,
         'lastTime': new Date().getTime(),
 
-        'canvas': $('#box').get(0),
-
-        'quads': new Array()
+        'canvas': canvas,
+        'scene': scene,
+        'camera': camera,        
+        'mesh': mesh,
+        'renderer': renderer
     };
 
-    state['ctx'] = state['canvas'].getContext('2d');
-
-
-}
-
-
-function createQuads(count) {
-    var rand255 = function() { return Math.round(Math.random() * 255); }
-    for (var i = 0; i < count; i++) {
-        var fillStyle = 'rgb(' + rand255() + ', ' + rand255() + ', ' + rand255() + ')';
-        state['quads'].push([Math.random() * 800, Math.random() * 600, 0, fillStyle]);
-    }
-}
-
-function moveQuads() {
-    var clampVary = function(val, vary, min, max) { 
-        val += (Math.random() * vary) - (vary / 2);
-        return Math.max(min, Math.min(max, val)); 
-    }
-    for (var i = 0; i < state['quads'].length; i++) {
-        var quad = state['quads'][i];
-        quad[0] = clampVary(quad[0], 2, 0, 800);
-        quad[1] = clampVary(quad[1], 2, 0, 600);
-        quad[2] = clampVary(quad[2], 0.4, 0, 6.28);
-    }
 }
 
 
 function go() {
     setup();
-    createQuads(1000);
     window.requestAnimFrame(frame);
 }
 
@@ -59,37 +60,16 @@ function go() {
 function frame() {
     state['frames'] += 1;
 
+    // state['mesh'].rotation.x = 0.5;
+    // state['mesh'].rotation.y = 0.5;
+    state['mesh'].rotation.x += 0.01;
+    state['mesh'].rotation.y += 0.02;
+
+    state['renderer'].render( 
+        state['scene'], 
+        state['camera'] );
+
     info();
-
-    moveQuads();
-
-    var ctx = state['ctx'];
-
-    ctx.fillStyle = 'rgb(0, 0, 0)';
-    ctx.fillRect(0, 0, 800, 600);
-
-    ctx.save();
-
-    for (var i = 0; i < state['quads'].length; i++) {
-        var quad = state['quads'][i];
-
-        ctx.fillStyle = quad[3];
-        
-        ctx.translate(quad[0], quad[1]);
-        ctx.rotate(quad[2]);
-        
-        ctx.beginPath();
-        ctx.moveTo(-5, -5);
-        ctx.lineTo( 5, -5);
-        ctx.lineTo( 5,  5);
-        ctx.lineTo(-5,  5);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.restore();
-        ctx.save();
-
-    }
 
     window.requestAnimFrame(frame);
 }
@@ -105,5 +85,4 @@ function info() {
         state['frames'] = 0;
         state['lastTime'] = time;
     }
-
 }
