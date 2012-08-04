@@ -1,36 +1,86 @@
-CubeSet = function() {
+CubeSet = function(dim) {
+    this.dim = dim || 20;
     this.cubes = [];
 };
 
-CubeSet.prototype.addCube = function(x, y, color) {
-    this.cubes.append([x, y, {'color': color}]);
+CubeSet.prototype.addAscii = function(lines, colors) {
+    var cx, cy;
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        for (var j = 0; j < line.length; j++) {
+            if (line[j] == 'X') {
+                cx = j;
+                cy = i;
+                break;
+            }
+        }
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        for (var j = 0; j < line.length; j++) {
+            if (line[j] == ' ') continue;
+            this.addCube(j - cx, cy - i, 0, colors[line[j]]);
+        }
+    }
 }
 
-CubeSet.prototype.toGeometry = function() {
+CubeSet.prototype.addCube = function(x, y, z, color) {
+    this.cubes.push({'x': x, 'y': y, 'z': z, 'color': color});
+}
+
+CubeSet.prototype.toMesh = function() {
     var geom = new THREE.Geometry();
     geom.materials = [];
 
-    var dim = 200, dim_half = dim / 2;
+    var dim = this.dim, dim_half = this.dim / 2;
 
-    for (var x = -1; x < 2; x++) {
-        this.buildPlane(geom, x, 0, 0, 'z', 'y', 'x', - 1, - 1, dim,  1 ); // px
-	    this.buildPlane(geom, x, 0, 0, 'z', 'y', 'x',   1, - 1, dim, -1 ); // nx
-	    this.buildPlane(geom, x, 0, 0, 'x', 'z', 'y',   1,   1, dim,  1 ); // py
-	    this.buildPlane(geom, x, 0, 0, 'x', 'z', 'y',   1, - 1, dim, -1 ); // ny
-	    this.buildPlane(geom, x, 0, 0, 'x', 'y', 'z',   1, - 1, dim,  1 ); // pz
-	    this.buildPlane(geom, x, 0, 0, 'x', 'y', 'z', - 1, - 1, dim, -1 ); // nz
+    var matsByColor = {};
+
+    var byPos = {};
+    for (var i = 0; i < this.cubes.length; i++) {
+        var cube = this.cubes[i];
+        byPos[[cube.x,cube.y,cube.z]] = true;
     }
 
-    console.log("Faces:", geom.faces.length);
+    for (i = 0; i < this.cubes.length; i++) {
+        var cube = this.cubes[i];
 
-	//geom.computeCentroids();
+        var matIdx = matsByColor[cube.color];
+        if (matIdx === undefined) {
+            var mat = new THREE.MeshLambertMaterial({color: cube.color, overdraw: true });
+            geom.materials.push(mat);
+            matIdx = matsByColor = geom.materials.length - 1;
+        }
+
+        if (!byPos[[cube.x+1, cube.y, cube.z]])
+            this.buildPlane(geom, cube.x, cube.y, cube.z, 'z', 'y', 'x', - 1, - 1, dim,  1, matIdx ); // px
+
+        if (!byPos[[cube.x-1, cube.y, cube.z]])
+	        this.buildPlane(geom, cube.x, cube.y, cube.z, 'z', 'y', 'x',   1, - 1, dim, -1, matIdx ); // nx
+
+        if (!byPos[[cube.x, cube.y+1, cube.z]])
+	        this.buildPlane(geom, cube.x, cube.y, cube.z, 'x', 'z', 'y',   1,   1, dim,  1, matIdx ); // py
+
+        if (!byPos[[cube.x, cube.y-1, cube.z]])
+	        this.buildPlane(geom, cube.x, cube.y, cube.z, 'x', 'z', 'y',   1, - 1, dim, -1, matIdx ); // ny
+
+        if (!byPos[[cube.x, cube.y, cube.z+1]])
+	        this.buildPlane(geom, cube.x, cube.y, cube.z, 'x', 'y', 'z',   1, - 1, dim,  1, matIdx ); // pz
+
+        if (!byPos[[cube.x, cube.y, cube.z+-1]])
+	       this.buildPlane(geom, cube.x, cube.y, cube.z, 'x', 'y', 'z', - 1, - 1, dim, -1, matIdx ); // nz
+    }
+
+	geom.computeCentroids();
 	geom.mergeVertices();
 
-    return geom;
+    var mesh = new THREE.Mesh( geom, new THREE.MeshFaceMaterial() );
 
+    return mesh;
 }
 
-CubeSet.prototype.buildPlane = function(geom, x, y, z, u, v, w, udir, vdir, dim, depth ) {
+CubeSet.prototype.buildPlane = function(geom, x, y, z, u, v, w, udir, vdir, dim, depth, matIdx ) {
 	var dim_half = dim / 2;
     var offset = geom.vertices.length;
 
@@ -51,7 +101,8 @@ CubeSet.prototype.buildPlane = function(geom, x, y, z, u, v, w, udir, vdir, dim,
 
 	face.normal.copy( normal );
     face.vertexNormals.push( normal, normal, normal, normal );
-    
+    face.materialIndex = matIdx;
+
 	geom.faces.push( face );
 	geom.faceVertexUvs[ 0 ].push( [
 		new THREE.UV( 0, 0 ),

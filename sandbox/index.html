@@ -2,19 +2,24 @@
 <html lang="en">
   <head>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript"></script>
-    <script src="/js/Three.js"></script>
-    <script src="/js/CubeSet.js"></script>
-    <script src="/js/sandbox.js" type="text/javascript"></script>
+    <script src="js/Three.js"></script>
+    <script src="js/CubeSet.js"></script>
+    <script src="js/sandbox.js" type="text/javascript"></script>
   </head>
   
   <body>
 
-    <canvas id="box" width="800" height="600" style="background-color: black">
+    <div id="box">
       Sorry, no canvas support.
-    </canvas>
+    </div>
 
     <div id="info" style="position: absolute; left: 850px; top: 10px">
+      <p style="color: #000099">
+        Use arrow keys.
+      </p>
       <p>FPS: <strong class="fps">??</strong></p>
+      <p>Faces: <strong class="faces">??</strong></p>
+      <p>Renderer: <strong class="renderer">??</strong></p>
     </div>
 
     <script type="text/javascript">
