@@ -38,6 +38,12 @@ func (user *User) StorageKey() string {
 	return user.Name
 }
 
+func (user *User) CheckPassword(given string) bool {
+	var err = bcrypt.CompareHashAndPassword(
+		user.PasswordHash,
+		[]byte(given))
+	return err == nil
+}
 
 // ------------------------------------------
 // Service endpoints
@@ -52,6 +58,14 @@ func GetService() *services.Service {
 		    services.Arg{Name: "password", ArgType: services.StringArg},
 	    },
 		method_register)
+
+	service.AddMethod(
+		"login",
+		[]services.Arg{
+		    services.Arg{Name: "email", ArgType: services.StringArg},
+		    services.Arg{Name: "password", ArgType: services.StringArg},
+	    },
+		method_login)
 	
 	return service
 }
@@ -60,7 +74,7 @@ func GetService() *services.Service {
 func method_register(args map[string]interface{}) (bool, map[string]interface{}) {
 	var response = make(map[string]interface{})
 
-	// XXX BGH TODO: Get this somehow
+	// XXX BGH TODO: Get this from context
 	var client = storage.NewRiakClient("http://localhost:8098")
 
 	user, ok := CreateUser(
@@ -77,5 +91,21 @@ func method_register(args map[string]interface{}) (bool, map[string]interface{})
 		"Registered account: %s\n", 
 		user.Name)
 	
+	return true, response
+}
+
+func method_login(args map[string]interface{}) (bool, map[string]interface{}) {
+	var response = make(map[string]interface{})
+
+	// XXX BGH TODO: Get this from context
+	var client = storage.NewRiakClient("http://localhost:8098")
+
+	var user = User{Name: args["email"].(string)}
+
+	if !client.Get(&user) || !user.CheckPassword(args["password"].(string)) {
+		response["message"] = "Invalid credentials"
+		return false, response
+	}
+
 	return true, response
 }

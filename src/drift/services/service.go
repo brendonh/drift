@@ -54,47 +54,73 @@ var requestArgSpec = []Arg {
 	Arg{Name: "data", ArgType: RawArg},
 }
 
-func (collection ServiceCollection) Handle(request map[string]interface{}) map[string]interface{} {
-	ok, errors, args := Parse(requestArgSpec, request)
+func (collection ServiceCollection) HandleRequest(request map[string]interface{}) map[string]interface{} {
+	ok, resolutionErrors, args := Parse(requestArgSpec, request)
 	if !ok {
-		return ErrorResponse(ListToSlice(errors))
+		return ErrorResponse(ListToStringSlice(resolutionErrors))
 	}
 
-	service, ok := collection.Services[args["service"].(string)]
+	return Response(collection.HandleCall(
+		args["service"].(string), 
+		args["method"].(string),
+		args["data"].(map[string]interface{})))
+
+}
+
+func (collection ServiceCollection) HandleCall(
+	serviceName string, 
+	methodName string,
+	data map[string]interface{},
+    ) (bool, []string, map[string]interface{}) {
+
+
+	service, ok := collection.Services[serviceName]
 	if !ok {
-		return ErrorResponse([]interface{}{"No such service"})
+		return false, []string{"No such service"}, nil
 	}
 
-	method, ok := service.Methods[args["method"].(string)]
+	method, ok := service.Methods[methodName]
 	if !ok {
-		return ErrorResponse([]interface{}{"No such method"})
+		return false, []string{"No such method"}, nil
 	}
 
-	ok, errors, args = Parse(method.ArgSpec, args["data"].(map[string]interface{}))
+	ok, errors, args := Parse(method.ArgSpec, data)
 	if !ok {
-		return ErrorResponse(ListToSlice(errors))
+		return false, ListToStringSlice(errors), nil
 	}
 
 	ok, response := method.Handler(args)
 	if !ok {
-		return FailureResponse(response)
+		return false, nil, response
 	}
 
-	return SuccessResponse(response)
+	return true, nil, response
 }
 
-func ListToSlice(l *list.List) []interface{} {
-	var slice = make([]interface{}, l.Len())
+func ListToStringSlice(l *list.List) []string {
+	var slice = make([]string, l.Len())
 	var i = 0
 	for el := l.Front(); el != nil; el = el.Next() {
-		slice[i] = el.Value
+		slice[i] = el.Value.(string)
 		i++
 	}
 	return slice
 }
 
 
-func ErrorResponse(errors []interface{}) map[string]interface{} {
+func Response(ok bool, errors []string, response map[string]interface{}) map[string]interface{} {
+	if ok { 
+		return SuccessResponse(response)
+	}
+
+	if errors != nil {
+		return ErrorResponse(errors)
+	}
+
+	return FailureResponse(response)
+}
+
+func ErrorResponse(errors []string) map[string]interface{} {
 	var response = make(map[string]interface{})
 	response["success"] = false
 	response["reason"] = "call error"

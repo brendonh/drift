@@ -4,10 +4,11 @@ import (
 	//"drift/storage"
 	"drift/accounts"
 	"drift/services"
+	"drift/endpoints"
 	"fmt"
 
-	"bytes"
-	"encoding/json"
+	"os"
+	"os/signal"
 
 )
 
@@ -24,23 +25,40 @@ func main() {
 	serviceCollection := services.NewServiceCollection()
 	serviceCollection.AddService(accounts.GetService())
 
-	blob := bytes.NewBufferString(
-		`{"service": "accounts", "method": "register", "data": {"email": "brendonh3@gmail.com", "password": "test"}}`).Bytes()	
 
-	var args map[string]interface{}
-	err := json.Unmarshal(blob, &args)
+	var stopper = make(chan os.Signal, 1)
+	signal.Notify(stopper)
+
+	endpoint := endpoints.NewHttpRpcEndpoint(":9999", serviceCollection)
+
+	fmt.Printf("Starting HTTP RPC: %v\n", endpoint.Start())
+
+	<-stopper
+	close(stopper)
 	
-	if err != nil {
-		fmt.Printf("Oh no: %s\n", err)
-		return
-	}
+	fmt.Printf("Shutting down ...\n")
 
-	var response = serviceCollection.Handle(args)
-
-	reply, _ := json.Marshal(response)
-
-	fmt.Printf("Response: %s\n", reply)
+	fmt.Printf("Stopping HTTP RPC: %v\n", endpoint.Stop())
 }
+
+
+// 	blob := bytes.NewBufferString(
+// 		`{"service": "accounts", "method": "register", "data": {"email": "brendonh4@gmail.com", "password": "test"}}`).Bytes()	
+
+// 	var args map[string]interface{}
+// 	err := json.Unmarshal(blob, &args)
+	
+// 	if err != nil {
+// 		fmt.Printf("Oh no: %s\n", err)
+// 		return
+// 	}
+
+// 	var response = serviceCollection.HandleRequest(args)
+
+// 	reply, _ := json.Marshal(response)
+
+// 	fmt.Printf("Response: %s\n", reply)
+// }
 
 
 // func main() {
