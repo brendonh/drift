@@ -1,4 +1,4 @@
-package drift
+package storage
 
 import (
 	"bytes"
@@ -18,10 +18,7 @@ type RiakClient struct {
 }
 
 func NewRiakClient(baseURL string) StorageClient {
-	c := new(RiakClient)
-	c.httpc = &http.Client{}
-	c.baseURL = baseURL
-	return c
+	return &RiakClient{ &http.Client{}, baseURL }
 }
 
 func (client *RiakClient) Get(obj Storable) bool {

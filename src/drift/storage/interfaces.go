@@ -1,4 +1,4 @@
-package drift
+package storage
 
 type StorageClient interface {
 	Get(Storable) bool

@@ -1,8 +1,14 @@
 package main
 
 import (
-	"drift/storage"
+	//"drift/storage"
+	"drift/accounts"
+	"drift/services"
 	"fmt"
+
+	"bytes"
+	"encoding/json"
+
 )
 
 type Sector struct {
@@ -15,26 +21,49 @@ func (sector *Sector) StorageKey() string {
 }
 
 func main() {
-	client := drift.NewRiakClient("http://localhost:8098")
+	serviceCollection := services.NewServiceCollection()
+	serviceCollection.AddService(accounts.GetService())
 
-	sector := Sector{0, 1, "Away"}
+	blob := bytes.NewBufferString(
+		`{"service": "accounts", "method": "register", "data": {"email": "brendonh3@gmail.com", "password": "test"}}`).Bytes()	
 
-	ok := client.Put(&sector)
-
-	if !ok {
-		fmt.Printf("Write Failed\n")
+	var args map[string]interface{}
+	err := json.Unmarshal(blob, &args)
+	
+	if err != nil {
+		fmt.Printf("Oh no: %s\n", err)
 		return
 	}
 
-	fmt.Printf("Ok\n")
+	var response = serviceCollection.Handle(args)
 
-	newSector := Sector{X: 0, Y: 1}
-	ok = client.Get(&newSector)
+	reply, _ := json.Marshal(response)
 
-	if !ok {
-		fmt.Printf("Read Failed\n")
-		return
-	}
-
-	fmt.Printf("%s\n", newSector.Name)
+	fmt.Printf("Response: %s\n", reply)
 }
+
+
+// func main() {
+// 	client := drift.NewRiakClient("http://localhost:8098")
+
+// 	sector := Sector{0, 1, "Away"}
+
+// 	ok := client.Put(&sector)
+
+// 	if !ok {
+// 		fmt.Printf("Write Failed\n")
+// 		return
+// 	}
+
+// 	fmt.Printf("Ok\n")
+
+// 	newSector := Sector{X: 0, Y: 1}
+// 	ok = client.Get(&newSector)
+
+// 	if !ok {
+// 		fmt.Printf("Read Failed\n")
+// 		return
+// 	}
+
+// 	fmt.Printf("%s\n", newSector.Name)
+// }
