@@ -4,10 +4,12 @@ import (
 	"container/list"
 )
 
+type APIData map[string]interface{}
+
 type Method struct {
 	Name string
 	ArgSpec []Arg
-	Handler func(map[string]interface{}) (bool, map[string]interface{})
+	Handler func(APIData) (bool, APIData)
 }
 
 type Service struct {
@@ -35,7 +37,7 @@ func NewServiceCollection() *ServiceCollection {
 func (service *Service) AddMethod(
 	name string, 
 	argSpec []Arg,
-	handler func(map[string]interface{}) (bool, map[string]interface{})) {
+	handler func(APIData) (bool, APIData)) {
 
 	service.Methods[name] = Method{
 		Name: name,
@@ -54,7 +56,7 @@ var requestArgSpec = []Arg {
 	Arg{Name: "data", ArgType: RawArg},
 }
 
-func (collection ServiceCollection) HandleRequest(request map[string]interface{}) map[string]interface{} {
+func (collection ServiceCollection) HandleRequest(request APIData) APIData {
 	ok, resolutionErrors, args := Parse(requestArgSpec, request)
 	if !ok {
 		return ErrorResponse(ListToStringSlice(resolutionErrors))
@@ -63,15 +65,15 @@ func (collection ServiceCollection) HandleRequest(request map[string]interface{}
 	return Response(collection.HandleCall(
 		args["service"].(string), 
 		args["method"].(string),
-		args["data"].(map[string]interface{})))
+		args["data"].(APIData)))
 
 }
 
 func (collection ServiceCollection) HandleCall(
 	serviceName string, 
 	methodName string,
-	data map[string]interface{},
-    ) (bool, []string, map[string]interface{}) {
+	data APIData,
+    ) (bool, []string, APIData) {
 
 
 	service, ok := collection.Services[serviceName]
@@ -108,7 +110,7 @@ func ListToStringSlice(l *list.List) []string {
 }
 
 
-func Response(ok bool, errors []string, response map[string]interface{}) map[string]interface{} {
+func Response(ok bool, errors []string, response APIData) APIData {
 	if ok { 
 		return SuccessResponse(response)
 	}
@@ -120,23 +122,23 @@ func Response(ok bool, errors []string, response map[string]interface{}) map[str
 	return FailureResponse(response)
 }
 
-func ErrorResponse(errors []string) map[string]interface{} {
-	var response = make(map[string]interface{})
+func ErrorResponse(errors []string) APIData {
+	var response = make(APIData)
 	response["success"] = false
 	response["reason"] = "call error"
 	response["errors"] = errors
 	return response
 }
 
-func SuccessResponse(data map[string]interface{}) map[string]interface{} {
-	var response = make(map[string]interface{})
+func SuccessResponse(data APIData) APIData {
+	var response = make(APIData)
 	response["success"] = true
 	response["data"] = data
 	return response
 }
 
-func FailureResponse(errors map[string]interface{}) map[string]interface{} {
-	var response = make(map[string]interface{})
+func FailureResponse(errors APIData) APIData {
+	var response = make(APIData)
 	response["success"] = false
 	response["reason"] = "failure"
 	response["errors"] = errors

@@ -73,7 +73,7 @@ func (endpoint *HttpRpcEndpoint) ServeHTTP(response http.ResponseWriter, req *ht
 
 	req.ParseForm()
 
-	var form = make(map[string]interface{})
+	var form = make(services.APIData)
 	for k, v := range req.Form {
 		form[k] = v[0]
 	}

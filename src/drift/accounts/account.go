@@ -71,8 +71,8 @@ func GetService() *services.Service {
 }
 
 
-func method_register(args map[string]interface{}) (bool, map[string]interface{}) {
-	var response = make(map[string]interface{})
+func method_register(args services.APIData) (bool, services.APIData) {
+	var response = make(services.APIData)
 
 	// XXX BGH TODO: Get this from context
 	var client = storage.NewRiakClient("http://localhost:8098")
@@ -94,8 +94,8 @@ func method_register(args map[string]interface{}) (bool, map[string]interface{})
 	return true, response
 }
 
-func method_login(args map[string]interface{}) (bool, map[string]interface{}) {
-	var response = make(map[string]interface{})
+func method_login(args services.APIData) (bool, services.APIData) {
+	var response = make(services.APIData)
 
 	// XXX BGH TODO: Get this from context
 	var client = storage.NewRiakClient("http://localhost:8098")

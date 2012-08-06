@@ -22,10 +22,10 @@ type Arg struct {
 }
 
 
-func Parse(argspec []Arg, args map[string]interface{}) (
-	bool, *list.List, map[string]interface{}) {
+func Parse(argspec []Arg, args APIData) (
+	bool, *list.List, APIData) {
 
-	var parsedArgs map[string]interface{} = make(map[string]interface{});
+	var parsedArgs APIData = make(APIData);
 	var errors = list.New()
 
 	for _, arg := range argspec {
@@ -84,7 +84,7 @@ func convertArgVal(arg Arg, val interface{}) (
 		return true, nil, val.(string)
 	case NestedArg:
 		spec := arg.Extra.([]Arg)
-		nest := val.(map[string]interface{})
+		nest := val.(APIData)
 		return Parse(spec, nest)
 	case RawArg:
 		return true, nil, val
