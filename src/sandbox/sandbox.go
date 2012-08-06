@@ -24,10 +24,10 @@ func (sector *Sector) StorageKey() string {
 
 func main() {
 	client := storage.NewRiakClient("http://localhost:8098")	
-	var shipIDs []string
-	var ok bool
+	//var shipIDs []string
+	//var ok bool
 
-	// shipIDs, ok = client.Keys("Ship")
+	// shipIDs, ok := client.Keys("Ship")
 
 	// if ok {
 	// 	for _, shipID := range shipIDs {
@@ -47,14 +47,11 @@ func main() {
 
 	// fmt.Printf("~~~~~~~~~~~~~~\n")
 	
-	shipIDs, ok = client.Keys("Ship")
+	ship := &ships.Ship{ Owner: "brendonh" }
+	myShips := client.IndexLookup(ship, "Owner")	
 
-	if ok {
-		for _, shipID := range shipIDs {
-			var ship = &ships.Ship{ ID: shipID }
-			client.Get(ship)
-			fmt.Printf("Ship: %v\n", ship)
-		}
+	for ok := myShips.Next(ship); ok; ok = myShips.Next(ship) {
+		fmt.Printf("Ship: %s (%s)\n", ship.Name, ship.ID)
 	}
 
 }

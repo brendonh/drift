@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"text/template"
 
 	"github.com/ugorji/go-msgpack"
 )
@@ -39,8 +40,23 @@ func (client *RiakClient) GetKey(bucket string, key string, target interface{}) 
 	defer resp.Body.Close()
 
 	body, _ := ioutil.ReadAll(resp.Body)
-	var packed = make([]byte, base64.StdEncoding.DecodedLen(len(body)));
-	_, err := base64.StdEncoding.Decode(packed, body)
+	return client.Decode(body, target)
+}
+
+
+func (client *RiakClient) DecodeString(content string, target interface{}) bool {
+	var bytes = bytes.NewBufferString(content).Bytes()
+	return client.Decode(bytes, target)
+}
+
+func (client *RiakClient) Decode(content []byte, target interface{}) bool {
+	var packed = make([]byte, base64.StdEncoding.DecodedLen(len(content)));
+
+	_, err := base64.StdEncoding.Decode(packed, content)
+
+	var temp interface{}
+	msgpack.Unmarshal(packed, &temp, nil)
+
 	err = msgpack.Unmarshal(packed, &target, nil)
 
 	if err != nil {
@@ -50,6 +66,7 @@ func (client *RiakClient) GetKey(bucket string, key string, target interface{}) 
 
 	return true
 }
+
 
 func (client *RiakClient) Put(obj Storable) bool {
 	structName := reflect.TypeOf(obj).Elem().Name()
@@ -61,6 +78,8 @@ func (client *RiakClient) Put(obj Storable) bool {
 		key, ok = client.PutNew(structName, obj)
 		if ok {
 			obj.SetFromStorageKey(key)
+			// Temp hack, hopefully
+			client.Put(obj)
 		}
 	} else {
 		_, ok = client.putRaw(structName, key, obj)
@@ -128,6 +147,94 @@ func (client *RiakClient) Delete(bucket string, key string) bool {
 
 	return true
 }
+
+
+var indexQueryTemplate = `{
+    "inputs": {
+        "bucket": "{{.bucket}}",
+        "index": "{{.index}}",
+        "key": "{{.value}}"
+    },
+    "query": [
+        {
+            "map": {
+                "language": "erlang",
+                "module": "riak_kv_mapreduce",
+                "function": "map_object_value"
+            }
+        }
+    ]
+}`
+
+
+func (client *RiakClient) IndexLookup(obj Storable, index string) StorableIterator {
+	var structType = reflect.TypeOf(obj)
+	var structName = structType.Elem().Name()
+	var indexValue = reflect.ValueOf(obj).Elem().FieldByName(index).String()
+	fmt.Printf("Looking up %s => %s\n", index, indexValue)
+
+	var tmpl = template.Must(template.New("indexQuery").Parse(indexQueryTemplate))
+
+	var vars = make(map[string]string)
+	vars["bucket"] = structName
+	vars["index"] = index + "_bin"
+	vars["value"] = indexValue
+
+	var query = bytes.NewBufferString("")
+	tmpl.Execute(query, vars)
+
+	var url = client.baseURL + "/mapred"
+
+	req, err := http.NewRequest("POST", url, query)
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := client.httpc.Do(req)
+
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		fmt.Printf("Err: %s\n", err)
+		return nil
+	} 
+
+	if resp.StatusCode != 200 {
+		fmt.Printf("Status: %d\n", resp.StatusCode)
+		fmt.Printf("%s\n", body)
+		return nil
+	}
+
+	var blobs []string
+	err = json.Unmarshal(body, &blobs)
+
+	if err != nil {
+		fmt.Printf("Err: %s\n", err)
+		return nil
+	} 
+
+	return NewBlobIterator(client, blobs)
+}
+
+type BlobIterator struct {
+	client *RiakClient
+	objs []string
+	index int
+}
+
+func NewBlobIterator(client *RiakClient, blobs []string) *BlobIterator {
+	return &BlobIterator{client, blobs, 0}
+}
+
+func (it *BlobIterator) Next(target Storable) bool {
+	if it.index >= len(it.objs) {
+		return false
+	}
+
+	it.client.DecodeString(it.objs[it.index], target)
+	it.index += 1
+	return true
+}
+
+
 
 type keyList struct {
 	Keys []string `json:"keys"`
