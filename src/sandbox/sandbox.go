@@ -1,12 +1,13 @@
 package main
 
 import (
-	//"drift/storage"
+	"drift/storage"
 	"drift/accounts"
 	"drift/services"
 	"drift/endpoints"
-	"fmt"
+	"drift/ships"
 
+	"fmt"
 	"os"
 	"os/signal"
 
@@ -22,9 +23,45 @@ func (sector *Sector) StorageKey() string {
 }
 
 func main() {
+	client := storage.NewRiakClient("http://localhost:8098")	
+	var shipIDs []string
+	var ok bool
+
+	// shipIDs, ok = client.Keys("Ship")
+
+	// if ok {
+	// 	for _, shipID := range shipIDs {
+	// 		fmt.Printf("Deleting: %s\n", shipID)
+	// 		client.Delete("Ship", shipID)
+	// 	}
+	// }
+
+	// return
+
+
+	// ship, ok := ships.CreateShip("brendonh", "sparky", client)
+
+	// if ok {
+	// 	fmt.Printf("Created ship: %s\n", ship.ID)
+	// }
+
+	// fmt.Printf("~~~~~~~~~~~~~~\n")
+	
+	shipIDs, ok = client.Keys("Ship")
+
+	if ok {
+		for _, shipID := range shipIDs {
+			var ship = &ships.Ship{ ID: shipID }
+			client.Get(ship)
+			fmt.Printf("Ship: %v\n", ship)
+		}
+	}
+
+}
+
+func startServer() {
 	serviceCollection := services.NewServiceCollection()
 	serviceCollection.AddService(accounts.GetService())
-
 
 	var stopper = make(chan os.Signal, 1)
 	signal.Notify(stopper)

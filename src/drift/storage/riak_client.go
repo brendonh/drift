@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -29,8 +30,6 @@ func (client *RiakClient) Get(obj Storable) bool {
 func (client *RiakClient) GetKey(bucket string, key string, target interface{}) bool {
 	url := client.buildURL(bucket, key)
 
-	fmt.Printf("URL: %s\n", url)
-
 	resp, ok := client.getRaw(url)
 
 	if !ok {
@@ -40,7 +39,9 @@ func (client *RiakClient) GetKey(bucket string, key string, target interface{}) 
 	defer resp.Body.Close()
 
 	body, _ := ioutil.ReadAll(resp.Body)
-	err := msgpack.Unmarshal(body, &target, nil)
+	var packed = make([]byte, base64.StdEncoding.DecodedLen(len(body)));
+	_, err := base64.StdEncoding.Decode(packed, body)
+	err = msgpack.Unmarshal(packed, &target, nil)
 
 	if err != nil {
 		fmt.Printf("Decode err: %#v\n", err)
@@ -52,7 +53,20 @@ func (client *RiakClient) GetKey(bucket string, key string, target interface{}) 
 
 func (client *RiakClient) Put(obj Storable) bool {
 	structName := reflect.TypeOf(obj).Elem().Name()
-	return client.PutKey(structName, obj.StorageKey(), obj)
+
+	var key = obj.StorageKey()
+	var ok bool
+
+	if key == "" {
+		key, ok = client.PutNew(structName, obj)
+		if ok {
+			obj.SetFromStorageKey(key)
+		}
+	} else {
+		_, ok = client.putRaw(structName, key, obj)
+	}
+
+	return ok
 }
 
 func (client *RiakClient) PutNew(bucket string, val interface{}) (string, bool) {
@@ -130,11 +144,25 @@ func (client *RiakClient) putRaw(bucket string, key string, val interface{}) (*h
 		return nil, false
 	}
 
+	b64 := base64.StdEncoding.EncodeToString(w.Bytes())
+
 	url := client.buildURL(bucket, key)
 
 	fmt.Printf("Put URL: %s\n", url)
-	req, err := http.NewRequest("POST", url, w)
-	req.Header.Add("Content-Type", "text/plain")
+	req, err := http.NewRequest("POST", url, bytes.NewBufferString(b64))
+	req.Header.Add("Content-Type", "application/octet-stream")
+
+	var structInfo = reflect.TypeOf(val).Elem()
+	var structValue = reflect.ValueOf(val).Elem()
+	for i := 0; i < structInfo.NumField(); i++ {
+		var field = structInfo.Field(i)
+		if field.Tag.Get("indexed") != "" {
+			var indexKey = "x-riak-index-" + field.Name + "_bin"
+			var indexVal = structValue.FieldByIndex([]int{i}).String()
+			req.Header.Add(indexKey, indexVal)
+		}
+	}
+
 	resp, err := client.httpc.Do(req)
 
 	if err != nil {

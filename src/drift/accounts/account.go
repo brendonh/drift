@@ -15,6 +15,15 @@ type User struct {
 	Admin bool
 }
 
+func (user *User) StorageKey() string {
+	return user.Name
+}
+
+func (user *User) SetFromStorageKey(key string) {
+	user.Name = key
+}
+
+
 func NewUser(name string, password string) *User {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return &User{name, hash, false}
@@ -34,9 +43,6 @@ func CreateUser(name string, password string, client storage.StorageClient) (*Us
 	return user, true
 }
 
-func (user *User) StorageKey() string {
-	return user.Name
-}
 
 func (user *User) CheckPassword(given string) bool {
 	var err = bcrypt.CompareHashAndPassword(
@@ -54,7 +60,7 @@ func GetService() *services.Service {
 	service.AddMethod(
 		"register",
 		[]services.Arg{
-		    services.Arg{Name: "email", ArgType: services.StringArg},
+		    services.Arg{Name: "name", ArgType: services.StringArg},
 		    services.Arg{Name: "password", ArgType: services.StringArg},
 	    },
 		method_register)
@@ -62,7 +68,7 @@ func GetService() *services.Service {
 	service.AddMethod(
 		"login",
 		[]services.Arg{
-		    services.Arg{Name: "email", ArgType: services.StringArg},
+		    services.Arg{Name: "name", ArgType: services.StringArg},
 		    services.Arg{Name: "password", ArgType: services.StringArg},
 	    },
 		method_login)
@@ -78,7 +84,7 @@ func method_register(args services.APIData) (bool, services.APIData) {
 	var client = storage.NewRiakClient("http://localhost:8098")
 
 	user, ok := CreateUser(
-		args["email"].(string), 
+		args["name"].(string), 
 		args["password"].(string), 
 		client)
 	
@@ -100,7 +106,7 @@ func method_login(args services.APIData) (bool, services.APIData) {
 	// XXX BGH TODO: Get this from context
 	var client = storage.NewRiakClient("http://localhost:8098")
 
-	var user = User{Name: args["email"].(string)}
+	var user = User{Name: args["name"].(string)}
 
 	if !client.Get(&user) || !user.CheckPassword(args["password"].(string)) {
 		response["message"] = "Invalid credentials"

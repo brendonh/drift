@@ -15,4 +15,5 @@ type StorageClient interface {
 
 type Storable interface {
 	StorageKey() string
+	SetFromStorageKey(string)
 }
