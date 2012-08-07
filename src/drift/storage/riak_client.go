@@ -167,11 +167,10 @@ var indexQueryTemplate = `{
 }`
 
 
-func (client *RiakClient) IndexLookup(obj Storable, index string) StorableIterator {
+func (client *RiakClient) IndexLookup(obj Storable, results interface{}, index string) bool {
 	var structType = reflect.TypeOf(obj)
 	var structName = structType.Elem().Name()
 	var indexValue = reflect.ValueOf(obj).Elem().FieldByName(index).String()
-	fmt.Printf("Looking up %s => %s\n", index, indexValue)
 
 	var tmpl = template.Must(template.New("indexQuery").Parse(indexQueryTemplate))
 
@@ -194,13 +193,13 @@ func (client *RiakClient) IndexLookup(obj Storable, index string) StorableIterat
 
 	if err != nil {
 		fmt.Printf("Err: %s\n", err)
-		return nil
+		return false
 	} 
 
 	if resp.StatusCode != 200 {
 		fmt.Printf("Status: %d\n", resp.StatusCode)
 		fmt.Printf("%s\n", body)
-		return nil
+		return false
 	}
 
 	var blobs []string
@@ -208,32 +207,24 @@ func (client *RiakClient) IndexLookup(obj Storable, index string) StorableIterat
 
 	if err != nil {
 		fmt.Printf("Err: %s\n", err)
-		return nil
-	} 
-
-	return NewBlobIterator(client, blobs)
-}
-
-type BlobIterator struct {
-	client *RiakClient
-	objs []string
-	index int
-}
-
-func NewBlobIterator(client *RiakClient, blobs []string) *BlobIterator {
-	return &BlobIterator{client, blobs, 0}
-}
-
-func (it *BlobIterator) Next(target Storable) bool {
-	if it.index >= len(it.objs) {
 		return false
 	}
 
-	it.client.DecodeString(it.objs[it.index], target)
-	it.index += 1
+	// Thanks to http://bazaar.launchpad.net/~niemeyer/mgo/v2/view/head:/session.go#L2124
+	resultv := reflect.ValueOf(results)
+	slicev := resultv.Elem()
+	elemt := slicev.Type().Elem()
+
+	for i := 0; i < len(blobs); i++ {
+		slicev = slicev.Slice(0, i)
+		elemp := reflect.New(elemt)
+		client.DecodeString(blobs[i], elemp.Interface())
+		slicev = reflect.Append(slicev, elemp.Elem())
+	}
+
+	resultv.Elem().Set(slicev.Slice(0, len(blobs)))
 	return true
 }
-
 
 
 type keyList struct {

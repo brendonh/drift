@@ -39,7 +39,7 @@ func main() {
 	// return
 
 
-	// ship, ok := ships.CreateShip("brendonh", "sparky", client)
+	//ships.CreateShip("brendonh", "onemore", client)
 
 	// if ok {
 	// 	fmt.Printf("Created ship: %s\n", ship.ID)
@@ -47,10 +47,13 @@ func main() {
 
 	// fmt.Printf("~~~~~~~~~~~~~~\n")
 	
-	ship := &ships.Ship{ Owner: "brendonh" }
-	myShips := client.IndexLookup(ship, "Owner")	
+	searchShip := &ships.Ship{ Owner: "brendonh" }
 
-	for ok := myShips.Next(ship); ok; ok = myShips.Next(ship) {
+	foundShips := make([]ships.Ship, 0)
+
+	client.IndexLookup(searchShip, &foundShips, "Owner")	
+
+	for _, ship := range foundShips {
 		fmt.Printf("Ship: %s (%s)\n", ship.Name, ship.ID)
 	}
 
