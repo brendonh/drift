@@ -6,6 +6,10 @@ import (
 	"drift/services"
 	"drift/endpoints"
 	"drift/ships"
+	"drift/sectors"
+	"drift/simulation"
+
+	. "github.com/brendonh/s3dm-go"
 
 	"fmt"
 	"os"
@@ -13,17 +17,35 @@ import (
 
 )
 
-type Sector struct {
-	X, Y int
-	Name string
-}
-
-func (sector *Sector) StorageKey() string {
-	return fmt.Sprintf("%d:%d", sector.X, sector.Y)
-}
-
 func main() {
 	client := storage.NewRiakClient("http://localhost:8098")	
+
+	sector := &sectors.Sector{ X: 0, Y: 0 }
+	client.Get(sector)
+	fmt.Printf("Sector: %s\n", sector.Name)
+
+	ship := &ships.Ship{ ID: "O8oYw8vF2FzAYkNExw3Pn6X5QZM" }
+	client.Get(ship)
+
+	fmt.Printf("Ship: %s\n", ship.Name)
+
+	var orient = V3{1, 0, 0}
+	//var velo = V3{0, 0, 0}
+
+	p := &simulation.Powered{
+		Position: V3{0, 0, 0},
+  		Velocity: V3{0, 50, 0}, //*velo.Unit().Muls(50),
+		Orientation: *orient.Unit(),
+		ThrustAccel: 1,
+	}
+
+	for i := 0; i < 200; i++ {		
+		fmt.Printf("Tick %d: %v\n", i, p)
+		p = p.RK4Integrate(1.0)
+	}
+}
+
+
 	//var shipIDs []string
 	//var ok bool
 
@@ -47,17 +69,16 @@ func main() {
 
 	// fmt.Printf("~~~~~~~~~~~~~~\n")
 	
-	searchShip := &ships.Ship{ Owner: "brendonh" }
+	// //searchShip := &ships.Ship{ Owner: "brendonh" }
 
-	foundShips := make([]ships.Ship, 0)
+	// foundShips := make([]ships.Ship, 5)
 
-	client.IndexLookup(searchShip, &foundShips, "Owner")	
+	// client.IndexLookup(searchShip, &foundShips, "Owner")	
 
-	for _, ship := range foundShips {
-		fmt.Printf("Ship: %s (%s)\n", ship.Name, ship.ID)
-	}
+	// for _, ship := range foundShips {
+	// 	fmt.Printf("Ship: %s (%s)\n", ship.Name, ship.ID)
+	// }
 
-}
 
 func startServer() {
 	serviceCollection := services.NewServiceCollection()

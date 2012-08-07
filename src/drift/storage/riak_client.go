@@ -246,7 +246,6 @@ func (client *RiakClient) putRaw(bucket string, key string, val interface{}) (*h
 
 	url := client.buildURL(bucket, key)
 
-	fmt.Printf("Put URL: %s\n", url)
 	req, err := http.NewRequest("POST", url, bytes.NewBufferString(b64))
 	req.Header.Add("Content-Type", "application/octet-stream")
 
