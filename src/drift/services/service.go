@@ -1,62 +1,73 @@
 package services
 
 import (
+	. "drift/common"
 	"container/list"
 )
 
-type APIData map[string]interface{}
-
-type Method struct {
-	Name string
-	ArgSpec []Arg
-	Handler func(APIData) (bool, APIData)
-}
 
 type Service struct {
-	Name string
-	Methods map[string]Method
+	name string
+	Methods map[string]APIMethod
 }
 
 type ServiceCollection struct {
-	Services map[string]Service
+	Services map[string]APIService
 }
+
 
 func NewService(name string) *Service {
 	return &Service{ 
-		Name: name,
-	    Methods: make(map[string]Method),
+		name: name,
+	    Methods: make(map[string]APIMethod),
 	}
 }
 
 func NewServiceCollection() *ServiceCollection {
 	return &ServiceCollection{ 
-		Services: make(map[string]Service),
+		Services: make(map[string]APIService),
 	}
 }
 
 func (service *Service) AddMethod(
 	name string, 
-	argSpec []Arg,
-	handler func(APIData) (bool, APIData)) {
-
-	service.Methods[name] = Method{
+	argSpec []APIArg,
+	handler APIHandler) {
+	service.Methods[name] = APIMethod{
 		Name: name,
 		ArgSpec: argSpec,
 		Handler: handler, 
 	}
 }
 
-func (collection *ServiceCollection) AddService(service *Service) {
-	collection.Services[service.Name] = *service
+func (service *Service) Name() string {
+	return service.name
 }
 
-var requestArgSpec = []Arg {
-	Arg{Name: "service", ArgType: StringArg},
-	Arg{Name: "method", ArgType: StringArg},
-	Arg{Name: "data", ArgType: RawArg},
+func (service *Service) FindMethod(methodName string) *APIMethod {
+	method, ok := service.Methods[methodName]
+	if !ok { 
+		return nil
+	}
+	return &method
 }
 
-func (collection ServiceCollection) HandleRequest(request APIData) APIData {
+
+// ------------------------------------------
+// Collections
+// ------------------------------------------
+
+func (collection *ServiceCollection) AddService(service APIService) {
+	collection.Services[service.Name()] = service
+}
+
+var requestArgSpec = []APIArg {
+	APIArg{Name: "service", ArgType: StringArg},
+	APIArg{Name: "method", ArgType: StringArg},
+	APIArg{Name: "data", ArgType: RawArg},
+}
+
+func (collection ServiceCollection) HandleRequest(request APIData, context *ServerContext) APIData {
 	ok, resolutionErrors, args := Parse(requestArgSpec, request)
 	if !ok {
 		return ErrorResponse(ListToStringSlice(resolutionErrors))
@@ -65,7 +76,8 @@ func (collection ServiceCollection) HandleRequest(request APIData) APIData {
 	return Response(collection.HandleCall(
 		args["service"].(string), 
 		args["method"].(string),
-		args["data"].(APIData)))
+		args["data"].(APIData),
+		context))
 
 }
 
@@ -73,7 +85,7 @@ func (collection ServiceCollection) HandleCall(
 	serviceName string, 
 	methodName string,
 	data APIData,
-    ) (bool, []string, APIData) {
+	context *ServerContext) (bool, []string, APIData) {
 
 
 	service, ok := collection.Services[serviceName]
@@ -81,8 +93,8 @@ func (collection ServiceCollection) HandleCall(
 		return false, []string{"No such service"}, nil
 	}
 
-	method, ok := service.Methods[methodName]
-	if !ok {
+	method := service.FindMethod(methodName)
+	if method == nil {
 		return false, []string{"No such method"}, nil
 	}
 
@@ -91,7 +103,7 @@ func (collection ServiceCollection) HandleCall(
 		return false, ListToStringSlice(errors), nil
 	}
 
-	ok, response := method.Handler(args)
+	ok, response := method.Handler(args, context)
 	if !ok {
 		return false, nil, response
 	}

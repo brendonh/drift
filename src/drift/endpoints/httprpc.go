@@ -1,7 +1,7 @@
 package endpoints
 
 import (
-	"drift/common"
+	. "drift/common"
 	"drift/services"
 
 	"fmt"
@@ -16,13 +16,11 @@ type HttpRpcEndpoint struct {
 	Address string
 	listener net.Listener
 	
-	context *common.ServerContext
-	// XXX BGH TODO: General context here
-	//ServiceCollection *services.ServiceCollection
+	context *ServerContext
 }
 
 
-func NewHttpRpcEndpoint(address string, context *common.ServerContext) Endpoint {
+func NewHttpRpcEndpoint(address string, context *ServerContext) Endpoint {
 	return &HttpRpcEndpoint{ 
 		Address: address,
 		context: context,
@@ -75,12 +73,13 @@ func (endpoint *HttpRpcEndpoint) ServeHTTP(response http.ResponseWriter, req *ht
 
 	req.ParseForm()
 
-	var form = make(services.APIData)
+	var form = make(APIData)
 	for k, v := range req.Form {
 		form[k] = v[0]
 	}
 
-	ok, errors, resp := endpoint.context.Services.HandleCall(bits[0], bits[1], form)
+	ok, errors, resp := endpoint.context.Services.HandleCall(
+		bits[0], bits[1], form, endpoint.context)
 
 	if errors != nil {
 		response.WriteHeader(400)

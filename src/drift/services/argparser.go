@@ -1,6 +1,7 @@
 package services
 
 import (
+	. "drift/common"
 	"fmt"
 	"container/list"
 )
@@ -13,16 +14,7 @@ const (
     RawArg
 )
 
-type Arg struct {
-	Name string
-	ArgType int
-	Required bool
-	Default interface{}
-	Extra interface{}
-}
-
-
-func Parse(argspec []Arg, args APIData) (
+func Parse(argspec []APIArg, args APIData) (
 	bool, *list.List, APIData) {
 
 	var parsedArgs APIData = make(APIData);
@@ -69,7 +61,7 @@ func Parse(argspec []Arg, args APIData) (
 }
 
 
-func convertArgVal(arg Arg, val interface{}) (
+func convertArgVal(arg APIArg, val interface{}) (
 	bool, *list.List, interface{}) {
 	defer func() {
 			recover()
@@ -83,7 +75,7 @@ func convertArgVal(arg Arg, val interface{}) (
 	case StringArg:
 		return true, nil, val.(string)
 	case NestedArg:
-		spec := arg.Extra.([]Arg)
+		spec := arg.Extra.([]APIArg)
 		nest := val.(APIData)
 		return Parse(spec, nest)
 	case RawArg:

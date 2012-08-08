@@ -1,7 +1,7 @@
 package accounts
 
 import (
-	"drift/storage"
+	. "drift/common"
 	"drift/services"
 
 	"fmt"
@@ -26,7 +26,9 @@ func NewUser(name string, password string) *User {
 }
 
 // XXX BGH TODO: Serialize to avoid Riak races
-func CreateUser(name string, password string, client storage.StorageClient) (*User, bool) {
+func CreateUser(name string, password string, context *ServerContext) (*User, bool) {
+	var client = context.StorageClient
+
 	existing := User{Name: name}
 	if client.Get(&existing) {
 		return nil, false
@@ -55,17 +57,17 @@ func GetService() *services.Service {
 	service := services.NewService("accounts")
 	service.AddMethod(
 		"register",
-		[]services.Arg{
-		    services.Arg{Name: "name", ArgType: services.StringArg},
-		    services.Arg{Name: "password", ArgType: services.StringArg},
+		[]APIArg{
+		    APIArg{Name: "name", ArgType: services.StringArg},
+		    APIArg{Name: "password", ArgType: services.StringArg},
 	    },
 		method_register)
 
 	service.AddMethod(
 		"login",
-		[]services.Arg{
-		    services.Arg{Name: "name", ArgType: services.StringArg},
-		    services.Arg{Name: "password", ArgType: services.StringArg},
+		[]APIArg{
+		    APIArg{Name: "name", ArgType: services.StringArg},
+		    APIArg{Name: "password", ArgType: services.StringArg},
 	    },
 		method_login)
 	
@@ -73,16 +75,13 @@ func GetService() *services.Service {
 }
 
 
-func method_register(args services.APIData) (bool, services.APIData) {
-	var response = make(services.APIData)
-
-	// XXX BGH TODO: Get this from context
-	var client = storage.NewRiakClient("http://localhost:8098")
+func method_register(args APIData, context *ServerContext) (bool, APIData) {
+	var response = make(APIData)
 
 	user, ok := CreateUser(
 		args["name"].(string), 
 		args["password"].(string), 
-		client)
+		context)
 	
 	if !ok {
 		response["message"] = "User exists"
@@ -96,11 +95,10 @@ func method_register(args services.APIData) (bool, services.APIData) {
 	return true, response
 }
 
-func method_login(args services.APIData) (bool, services.APIData) {
-	var response = make(services.APIData)
+func method_login(args APIData, context *ServerContext) (bool, APIData) {
+	var response = make(APIData)
 
-	// XXX BGH TODO: Get this from context
-	var client = storage.NewRiakClient("http://localhost:8098")
+	var client = context.StorageClient
 
 	var user = User{Name: args["name"].(string)}
 
