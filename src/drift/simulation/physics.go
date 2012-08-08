@@ -1,11 +1,12 @@
 package simulation
 
 import (
+	"drift/common"
 	. "github.com/brendonh/s3dm-go"
 )
 
-var MAX_SPEED = 50.0
-var MAX_SPEED_SQUARED = MAX_SPEED * MAX_SPEED
+
+var MAX_SPEED_SQUARED = common.MAX_SPEED * common.MAX_SPEED
 
 type PoweredBody struct {
 	Position V3
