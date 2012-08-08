@@ -1,48 +1,103 @@
 package main
 
 import (
+	"drift/common"
 	"drift/storage"
-	"drift/accounts"
 	"drift/services"
-	"drift/endpoints"
-	"drift/sectors"
+	"drift/accounts"
+	"drift/server"
 
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
-
 )
 
 func main() {
-	var client = storage.NewRawRiakClient("http://localhost:8098")
+	flag.Parse()
+	
+	if flag.NArg() == 0 {
+		fmt.Fprintf(os.Stderr, "usage: %s [command]\n", os.Args[0])
+		flag.PrintDefaults()
+		os.Exit(2)
+	}
 
-	sector := sectors.SectorByCoords(0, 0)
-	client.Get(sector)
-	fmt.Printf("Sector: %s (%d, %d)\n", sector.Name, sector.Coords.X, sector.Coords.Y)
+	var command = flag.Arg(0)
 
-	sector.LoadShips(client)
-	sector.DumpShips()
-	sector.Tick()
-	sector.DumpShips()
+	switch flag.Arg(0) {
+	case "start":
+		startServer()
+	case "emptybucket":
+		emptyBucket()
+	default:
+		fmt.Printf("Unknown command: %s\n", command)
+		os.Exit(2)
+	}
 }
 
-
 func startServer() {
+	fmt.Printf("Starting server...\n")
+	var client = storage.NewRawRiakClient("http://localhost:8098")
+
 	serviceCollection := services.NewServiceCollection()
 	serviceCollection.AddService(accounts.GetService())
+
+	var context = &common.ServerContext{
+		StorageClient: client,
+		Services: serviceCollection,
+	}
+	var s = server.NewServer(context)
 
 	var stopper = make(chan os.Signal, 1)
 	signal.Notify(stopper)
 
-	endpoint := endpoints.NewHttpRpcEndpoint(":9999", serviceCollection)
-
-	fmt.Printf("Starting HTTP RPC: %v\n", endpoint.Start())
+	s.Start()
 
 	<-stopper
 	close(stopper)
-	
-	fmt.Printf("Shutting down ...\n")
 
-	fmt.Printf("Stopping HTTP RPC: %v\n", endpoint.Stop())
+	fmt.Printf("Shutting down ...\n")
+	s.Stop()
 }
+
+func emptyBucket() {
+	if flag.NArg() != 2 {
+		fmt.Fprintf(os.Stderr, "usage: %s emptybucket [bucket]\n", os.Args[0])
+		flag.PrintDefaults()
+		os.Exit(2)
+	}
+
+	var client = storage.NewRawRiakClient("http://localhost:8098")
+	var bucket = flag.Arg(1)
+
+	fmt.Printf("Emptying bucket %s...\n", bucket)
+
+	keys, ok := client.Keys(bucket)
+
+	if !ok {
+		fmt.Printf("Couldn't retrieve keys.\n", bucket)
+		return
+	}
+
+	for _, key := range keys {
+		fmt.Printf("Deleting key %s... ", key)
+		ok := client.Delete(bucket, key)
+		if ok {
+			fmt.Printf("[ok]\n")
+		} else {
+			fmt.Printf("[error]\n")
+		}
+	}
+}
+
+	// sector := sectors.SectorByCoords(0, 0)
+	// client.Get(sector)
+	// fmt.Printf("Sector: %s (%d, %d)\n", sector.Name, sector.Coords.X, sector.Coords.Y)
+
+	// sector.LoadShips(client)
+	// sector.DumpShips()
+	// sector.Tick()
+	// sector.DumpShips()
+
+
 
