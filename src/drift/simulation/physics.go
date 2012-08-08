@@ -7,17 +7,15 @@ import (
 var MAX_SPEED = 50.0
 var MAX_SPEED_SQUARED = MAX_SPEED * MAX_SPEED
 
-type Powered struct {
+type PoweredBody struct {
 	Position V3
 	Velocity V3
-	Orientation V3
-	ThrustAccel float64
+	Thrust V3
 }
 
-func (p *Powered) Acceleration() *V3 {
-	var scale = p.Orientation.Dot(&p.Velocity) / MAX_SPEED_SQUARED
-	var acceleration = p.Orientation.Sub(p.Velocity.Muls(scale))
-	return acceleration.Muls(p.ThrustAccel)
+func (p *PoweredBody) Acceleration() *V3 {
+	var scale = p.Thrust.Dot(&p.Velocity) / MAX_SPEED_SQUARED
+	return p.Thrust.Sub(p.Velocity.Muls(scale))
 }
 
 // ------------------------------------------
@@ -29,12 +27,11 @@ type derivative struct {
 	Acceleration V3
 }
 
-func (p *Powered) RK4Evaluate(dt float64, derivativeIn *derivative) *derivative {
-	var np *Powered = &Powered{
+func (p *PoweredBody) RK4Evaluate(dt float64, derivativeIn *derivative) *derivative {
+	var np *PoweredBody = &PoweredBody{
 		Position: *p.Position.Add(derivativeIn.Velocity.Muls(dt)),
 		Velocity: *p.Velocity.Add(derivativeIn.Acceleration.Muls(dt)),
-		Orientation: p.Orientation,
-		ThrustAccel: p.ThrustAccel,
+    	Thrust: p.Thrust,
 	}
 	var derivativeOut = &derivative {
 		Velocity: np.Velocity,
@@ -43,7 +40,7 @@ func (p *Powered) RK4Evaluate(dt float64, derivativeIn *derivative) *derivative 
 	return derivativeOut
 }
 
-func (p *Powered) RK4Integrate(dt float64) *Powered {
+func (p *PoweredBody) RK4Integrate(dt float64) *PoweredBody {
 	var a = p.RK4Evaluate(0.0, &derivative{})
 	var b = p.RK4Evaluate(dt * 0.5, a)
 	var c = p.RK4Evaluate(dt * 0.5, b)
@@ -57,10 +54,9 @@ func (p *Powered) RK4Integrate(dt float64) *Powered {
 		b.Acceleration.Add(&c.Acceleration).Muls(2.0).Add(&d.Acceleration)).Muls(
 		1.0 / 6.0)
 
-	return &Powered{
+	return &PoweredBody{
 		Position: *p.Position.Add(dPosition),
 		Velocity: *p.Velocity.Add(dVelocity),
-		Orientation: p.Orientation,
-		ThrustAccel: p.ThrustAccel,
+		Thrust: p.Thrust,
 	}
 }

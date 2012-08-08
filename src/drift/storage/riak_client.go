@@ -10,8 +10,10 @@ import (
 	"reflect"
 	"strings"
 	"text/template"
+	"strconv"
 
 	"github.com/ugorji/go-msgpack"
+	"code.google.com/p/go-uuid/uuid"
 )
 
 type RiakClient struct {
@@ -22,6 +24,33 @@ type RiakClient struct {
 func NewRiakClient(baseURL string) StorageClient {
 	return &RiakClient{ &http.Client{}, baseURL }
 }
+
+func NewRawRiakClient(baseURL string) *RiakClient {
+	return &RiakClient{ &http.Client{}, baseURL }
+}
+
+
+
+func (client *RiakClient) GenerateID() string {
+	return uuid.New()
+}
+
+func (client *RiakClient) IndexString(val interface{}) string {
+	switch val.(type) {
+	case string:
+		return val.(string)
+	case int: 
+		return strconv.Itoa(val.(int))
+	}
+	str, ok := client.serialize(val)
+	if !ok {
+		fmt.Printf("Unserializable index value: %v\n", val)
+		return ""
+	}
+	return str
+
+}
+
 
 func (client *RiakClient) Get(obj Storable) bool {
 	structName := reflect.TypeOf(obj).Elem().Name()
@@ -72,18 +101,13 @@ func (client *RiakClient) Put(obj Storable) bool {
 	structName := reflect.TypeOf(obj).Elem().Name()
 
 	var key = obj.StorageKey()
-	var ok bool
 
 	if key == "" {
-		key, ok = client.PutNew(structName, obj)
-		if ok {
-			obj.SetFromStorageKey(key)
-			// Temp hack, hopefully
-			client.Put(obj)
-		}
-	} else {
-		_, ok = client.putRaw(structName, key, obj)
+		fmt.Printf("No storage key\n")
+		return false
 	}
+
+	_, ok := client.putRaw(structName, key, obj)
 
 	return ok
 }
@@ -170,7 +194,7 @@ var indexQueryTemplate = `{
 func (client *RiakClient) IndexLookup(obj Storable, results interface{}, index string) bool {
 	var structType = reflect.TypeOf(obj)
 	var structName = structType.Elem().Name()
-	var indexValue = reflect.ValueOf(obj).Elem().FieldByName(index).String()
+	var indexValue = client.IndexString(reflect.ValueOf(obj).Elem().FieldByName(index))
 
 	var tmpl = template.Must(template.New("indexQuery").Parse(indexQueryTemplate))
 
@@ -231,20 +255,29 @@ type keyList struct {
 	Keys []string `json:"keys"`
 }
 
-func (client *RiakClient) putRaw(bucket string, key string, val interface{}) (*http.Response, bool) {
-
+func (client *RiakClient) serialize(val interface{}) (string, bool) {
 	w := bytes.NewBufferString("")
 	enc := msgpack.NewEncoder(w)
 	err := enc.Encode(val)
 
 	if err != nil {
 		fmt.Printf("Err: %#v\n", err)
-		return nil, false
+		return "", false
 	}
 
-	b64 := base64.StdEncoding.EncodeToString(w.Bytes())
+	return base64.StdEncoding.EncodeToString(w.Bytes()), true
+
+}
+
+func (client *RiakClient) putRaw(bucket string, key string, val interface{}) (*http.Response, bool) {
 
 	url := client.buildURL(bucket, key)
+
+	b64, ok := client.serialize(val)
+
+	if !ok {
+		return nil, false
+	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBufferString(b64))
 	req.Header.Add("Content-Type", "application/octet-stream")
@@ -255,7 +288,7 @@ func (client *RiakClient) putRaw(bucket string, key string, val interface{}) (*h
 		var field = structInfo.Field(i)
 		if field.Tag.Get("indexed") != "" {
 			var indexKey = "x-riak-index-" + field.Name + "_bin"
-			var indexVal = structValue.FieldByIndex([]int{i}).String()
+			var indexVal = client.IndexString(structValue.FieldByIndex([]int{i}))
 			req.Header.Add(indexKey, indexVal)
 		}
 	}

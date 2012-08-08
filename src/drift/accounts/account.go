@@ -19,10 +19,6 @@ func (user *User) StorageKey() string {
 	return user.Name
 }
 
-func (user *User) SetFromStorageKey(key string) {
-	user.Name = key
-}
-
 
 func NewUser(name string, password string) *User {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

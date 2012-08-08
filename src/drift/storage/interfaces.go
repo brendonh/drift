@@ -1,6 +1,8 @@
 package storage
 
 type StorageClient interface {
+	GenerateID() string
+
 	Get(Storable) bool
 	Put(Storable) bool
 	IndexLookup(obj Storable, results interface{}, index string) bool
@@ -16,5 +18,4 @@ type StorageClient interface {
 
 type Storable interface {
 	StorageKey() string
-	SetFromStorageKey(string)
 }

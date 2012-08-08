@@ -7,9 +7,9 @@ import (
 	"drift/endpoints"
 	"drift/ships"
 	"drift/sectors"
-	"drift/simulation"
 
-	. "github.com/brendonh/s3dm-go"
+	//"drift/simulation"
+	//. "github.com/brendonh/s3dm-go"
 
 	"fmt"
 	"os"
@@ -18,31 +18,45 @@ import (
 )
 
 func main() {
-	client := storage.NewRiakClient("http://localhost:8098")	
+	var client = storage.NewRawRiakClient("http://localhost:8098")
 
-	sector := &sectors.Sector{ X: 0, Y: 0 }
+	// ship, _ := ships.CreateShip("brendonh", "onemore", client)
+	// fmt.Printf("Ship ID: %s\n", ship.ID)
+	// return
+
+	sector := sectors.SectorByCoords(0, 0)
 	client.Get(sector)
-	fmt.Printf("Sector: %s\n", sector.Name)
+	fmt.Printf("Sector: %s (%d, %d)\n", sector.Name, sector.Coords.X, sector.Coords.Y)
 
-	ship := &ships.Ship{ ID: "O8oYw8vF2FzAYkNExw3Pn6X5QZM" }
-	client.Get(ship)
+	searchLoc := &ships.ShipLocation{ Coords: sector.Coords }
+	foundLocs := make([]ships.ShipLocation, 0)
+	client.IndexLookup(searchLoc, &foundLocs, "Coords")
 
-	fmt.Printf("Ship: %s\n", ship.Name)
-
-	var orient = V3{1, 0, 0}
-	//var velo = V3{0, 0, 0}
-
-	p := &simulation.Powered{
-		Position: V3{0, 0, 0},
-  		Velocity: V3{0, 50, 0}, //*velo.Unit().Muls(50),
-		Orientation: *orient.Unit(),
-		ThrustAccel: 1,
+	for _, loc := range foundLocs {
+		fmt.Printf("Loc: %s (%s)\n", loc.ShipID, loc.Body.Position)
+		ship := loc.GetShip(client)
+		fmt.Printf("Ship: %s (%v)\n", ship.Name, ship.Location)
 	}
 
-	for i := 0; i < 200; i++ {		
-		fmt.Printf("Tick %d: %v\n", i, p)
-		p = p.RK4Integrate(1.0)
-	}
+	// ship := &ships.Ship{ ID: "f974bd25-3349-4aff-9924-341171b5f2b3" }
+	// client.Get(ship)
+
+	// ship.LoadLocation(client)
+	// fmt.Printf("Ship: %s\n", ship.Name)
+	// fmt.Printf("Location: %v\n", ship.Location.Body.Position)
+
+	// ship.SaveLocation(client)
+	
+	// p := &simulation.Powered{
+	// 	Position: V3{0, 0, 0},
+  	// 	Velocity: V3{0, 10, 0},
+	// 	Thrust: V3{0, -10, 0},
+	// }
+
+	// for i := 0; i < 5; i++ {		
+	// 	fmt.Printf("Tick %d: %v\n", i, p)
+	// 	p = p.RK4Integrate(1.0)
+	// }
 }
 
 

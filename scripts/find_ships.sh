@@ -1,15 +1,15 @@
 DATA=$(cat <<EOF
 {
     "inputs": {
-        "bucket": "Ship",
-        "index": "Owner_bin",
-        "key": "brendonh"
+        "bucket": "ShipLocation",
+        "index": "Coords_bin",
+        "key": "gqFYAKFZAA=="
     },
     "query": [
         {
             "map": {
                 "language": "javascript",
-                "source": "function(o) { return [[o.key, o.values[0].data]]; }"
+                "source": "function(o) { return [o.values[0].data]; }"
             }
         }
     ]
