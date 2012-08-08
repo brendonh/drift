@@ -2,7 +2,7 @@ package simulation
 
 import (
 	"drift/common"
-	. "github.com/brendonh/s3dm-go"
+	. "github.com/klkblake/s3dm"
 )
 
 
