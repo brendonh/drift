@@ -15,13 +15,12 @@ import (
 type HttpRpcEndpoint struct {
 	Address string
 	listener net.Listener
-	
-	context *ServerContext
+	context ServerContext
 }
 
 
-func NewHttpRpcEndpoint(address string, context *ServerContext) Endpoint {
-	return &HttpRpcEndpoint{ 
+func NewHttpRpcEndpoint(address string, context ServerContext) Endpoint {
+	return &HttpRpcEndpoint{
 		Address: address,
 		context: context,
 	}
@@ -39,7 +38,7 @@ func (endpoint *HttpRpcEndpoint) Start() bool {
 	}
 
 	endpoint.listener = listener
-	
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/favicon.ico", http.NotFound)
 	mux.Handle("/", endpoint)
@@ -47,6 +46,7 @@ func (endpoint *HttpRpcEndpoint) Start() bool {
 
 	return true
 }
+
 
 func (endpoint *HttpRpcEndpoint) Stop() bool {
 	if endpoint.listener == nil {
@@ -62,8 +62,8 @@ func (endpoint *HttpRpcEndpoint) Stop() bool {
 	return true
 }
 
-func (endpoint *HttpRpcEndpoint) ServeHTTP(response http.ResponseWriter, req *http.Request) {
 
+func (endpoint *HttpRpcEndpoint) ServeHTTP(response http.ResponseWriter, req *http.Request) {
 	bits := strings.SplitN(req.URL.Path[1:], "/", 2)
 
 	if len(bits) != 2 {
@@ -78,7 +78,7 @@ func (endpoint *HttpRpcEndpoint) ServeHTTP(response http.ResponseWriter, req *ht
 		form[k] = v[0]
 	}
 
-	ok, errors, resp := endpoint.context.Services.HandleCall(
+	ok, errors, resp := endpoint.context.API().HandleCall(
 		bits[0], bits[1], form, endpoint.context)
 
 	if errors != nil {
@@ -91,6 +91,4 @@ func (endpoint *HttpRpcEndpoint) ServeHTTP(response http.ResponseWriter, req *ht
 	response.Header().Add("Content-Length", strconv.Itoa(len(jsonReply)))
 
 	response.Write(jsonReply)
-	
-
 }

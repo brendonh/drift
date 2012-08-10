@@ -2,16 +2,9 @@ package services
 
 import (
 	. "drift/common"
+
 	"fmt"
 	"container/list"
-)
-
-const (
-	IntArg = iota
-	FloatArg
-	StringArg
-	NestedArg
-    RawArg
 )
 
 func Parse(argspec []APIArg, args APIData) (

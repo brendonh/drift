@@ -67,7 +67,7 @@ var requestArgSpec = []APIArg {
 	APIArg{Name: "data", ArgType: RawArg},
 }
 
-func (collection ServiceCollection) HandleRequest(request APIData, context *ServerContext) APIData {
+func (collection ServiceCollection) HandleRequest(request APIData, context ServerContext) APIData {
 	ok, resolutionErrors, args := Parse(requestArgSpec, request)
 	if !ok {
 		return ErrorResponse(ListToStringSlice(resolutionErrors))
@@ -85,7 +85,7 @@ func (collection ServiceCollection) HandleCall(
 	serviceName string, 
 	methodName string,
 	data APIData,
-	context *ServerContext) (bool, []string, APIData) {
+	context ServerContext) (bool, []string, APIData) {
 
 
 	service, ok := collection.Services[serviceName]

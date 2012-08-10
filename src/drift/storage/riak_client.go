@@ -1,6 +1,8 @@
 package storage
 
 import (
+	. "drift/common"
+
 	"bytes"
 	"encoding/json"
 	"encoding/base64"
@@ -15,6 +17,7 @@ import (
 	"github.com/ugorji/go-msgpack"
 	"code.google.com/p/go-uuid/uuid"
 )
+
 
 type RiakClient struct {
 	httpc   *http.Client

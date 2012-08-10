@@ -1,40 +1,57 @@
 package server
 
 import (
-	"drift/common"
-	"drift/endpoints"
+	. "drift/common"
 
 	"os"
 )
 
+
 type Server struct {
-	Context *common.ServerContext
-	Endpoints []endpoints.Endpoint
+	storage StorageClient
+	services API
+	endpoints []Endpoint
 	
 	stopper chan os.Signal
 }
 
-func NewServer(context *common.ServerContext) *Server {
-	httpRpc := endpoints.NewHttpRpcEndpoint(":9999", context)
+
+func NewServer(
+	storage StorageClient, 
+	services API) *Server {
 
 	return &Server {
-		Context: context,
-		Endpoints: []endpoints.Endpoint{ httpRpc },
+		storage: storage,
+		services: services,
+		endpoints: make([]Endpoint, 0),
 	}
 }
 
+func (server *Server) AddEndpoint(endpoint Endpoint) {
+	server.endpoints = append(server.endpoints, endpoint)
+}
+
 func (server *Server) Start() {
-	for _, endpoint := range server.Endpoints {
+	for _, endpoint := range server.endpoints {
 		endpoint.Start()
 	}
 }
 
 func (server *Server) Stop() {
-	for _, endpoint := range server.Endpoints {
+	for _, endpoint := range server.endpoints {
 		endpoint.Stop()
 	}
 }
 
-	
 
+// ------------------------------------------
+// Context API
+// ------------------------------------------
 
+func (server *Server) Storage() StorageClient {
+	return server.storage
+}
+
+func (server *Server) API() API {
+	return server.services
+}

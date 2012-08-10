@@ -1,11 +1,11 @@
 package main
 
 import (
-	"drift/common"
 	"drift/storage"
 	"drift/services"
 	"drift/accounts"
 	"drift/server"
+	"drift/endpoints"
 
 	"flag"
 	"fmt"
@@ -42,11 +42,10 @@ func startServer() {
 	serviceCollection := services.NewServiceCollection()
 	serviceCollection.AddService(accounts.GetService())
 
-	var context = &common.ServerContext{
-		StorageClient: client,
-		Services: serviceCollection,
-	}
-	var s = server.NewServer(context)
+	var s = server.NewServer(client, serviceCollection)
+
+	httpRpc := endpoints.NewHttpRpcEndpoint(":9999", s)
+	s.AddEndpoint(httpRpc)		
 
 	var stopper = make(chan os.Signal, 1)
 	signal.Notify(stopper)
