@@ -32,6 +32,7 @@ function startSocket(url) {
             'data': {}
         }
 
+        sendAPICall(ping, socket)
         sendAPICall(login, socket)
         sendAPICall(ping, socket)
 
@@ -42,15 +43,15 @@ function startSocket(url) {
     }
 
     socket.onmessage = function(evt) {
-        var data = evt.data;
+        var buf = evt.data;
 
-        // XXX BGH TODO: Use a better msgpack implementation
-        var bytes = []
-        var bufView = new Uint8Array(data)
-        for (var i = 0; i < data.byteLength; i++) {
-            bytes.push(bufView[i]);
+        var view = new DataView(buf);
+        var msgType = String.fromCharCode(view.getUint8(0));
+
+        if (msgType == 'a') {
+            var response = msgpack.decodeFromView(view, 1);
+            console.log("API reply:", JSON.stringify(response))
         }
-        console.log("Message:", JSON.stringify(msgpack.unpack(bytes)));
     }
 
     socket.onclose = function() {
@@ -68,16 +69,12 @@ var apiID = 0;
 
 function sendAPICall(data, socket) {
     data['id'] = apiID++;
-    console.log("Call:", JSON.stringify(data))
-    var msg = msgpack.pack(data);
+    console.log("Call:", JSON.stringify(data));
 
-    // XXX BGH TODO: Use a better msgpack implementation
-    var buf = new ArrayBuffer(msg.length + 1);
-    var bufView = new Uint8Array(buf);
-    bufView[0] = 'a'.charCodeAt(0);
-    for (var i=0; i<msg.length; i++) {
-        bufView[i+1] = msg[i];
-    }
- 
-    socket.send(buf);
+    var buf = new ArrayBuffer(64 * 1024);
+    var view = new DataView(buf);
+    var len = msgpack.encodeToView(data, view, 1);
+    view.setUint8(0, 'a'.charCodeAt(0));
+
+    socket.send(buf.slice(0, len+1));
 }

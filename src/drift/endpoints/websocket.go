@@ -5,6 +5,7 @@ import (
 	//"drift/services"
 
 	"fmt"
+	"io"
 	"reflect"
 	"bytes"
 	"net"
@@ -82,10 +83,13 @@ func (endpoint *WebsocketEndpoint) Handle(ws *websocket.Conn) {
 	var buf = make([]byte, 1024 * 64)
 
 	for {
+
 		msgLength, err := ws.Read(buf)
 		
 		if err != nil {
-			fmt.Printf("WS error: %v\n", err)
+			if err != io.EOF {
+				fmt.Printf("WS error: %#v\n", err)
+			}
 			break
 		}
 
@@ -93,13 +97,16 @@ func (endpoint *WebsocketEndpoint) Handle(ws *websocket.Conn) {
 			continue
 		}
 
+		var msgBuf = make([]byte, msgLength-1)
+		copy(msgBuf, buf[1:])
+
 		switch buf[0] {
 		case APIFrame:
-			go endpoint.HandleAPI(buf[1:msgLength], ws)
+			go endpoint.HandleAPI(msgBuf, ws)
 		case PositionFrame:
-			fmt.Printf("Position frame: %v\n", buf[1:msgLength])
+			fmt.Printf("Position frame: %v\n", msgBuf)
 		default:
-			fmt.Printf("Unknown frame: %v\n", buf[:msgLength])
+			fmt.Printf("Unknown frame: %v\n", msgBuf)
 		}
 	}
 }
@@ -125,12 +132,15 @@ func (endpoint *WebsocketEndpoint) HandleAPI(buf []byte, ws *websocket.Conn) {
 		response["id"] = id
 	}
 
-	reply, err := msgpack.Marshal(response)
+	w := bytes.NewBufferString("")
+	w.WriteByte('a')
+	enc := msgpack.NewEncoder(w)
+	err = enc.Encode(response)
 
 	if err != nil {
 		fmt.Printf("Encode err: %#v\n", err)
 		return
 	}
 
-	ws.Write(reply)
+	ws.Write(w.Bytes())
 }
