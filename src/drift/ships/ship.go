@@ -1,7 +1,7 @@
 package ships
 
 import (
-	"drift/storage"
+	. "drift/common"
 )
 
 type Ship struct {
@@ -20,7 +20,7 @@ func NewShip(id string, owner string, name string) *Ship {
 }
 
 
-func CreateShip(owner string, name string, client storage.StorageClient) (*Ship, bool) {	
+func CreateShip(owner string, name string, client StorageClient) (*Ship, bool) {	
 	var id = client.GenerateID()
 	ship := NewShip(id, owner, name)
 	if !client.Put(ship) {
@@ -29,7 +29,7 @@ func CreateShip(owner string, name string, client storage.StorageClient) (*Ship,
 	return ship, true
 }
 
-func (ship *Ship) SaveLocation(client storage.StorageClient) {
+func (ship *Ship) SaveLocation(client StorageClient) {
 	if ship.Location == nil {
 		return;
 	}
@@ -37,7 +37,7 @@ func (ship *Ship) SaveLocation(client storage.StorageClient) {
 	client.Put(ship.Location)
 }
 
-func (ship *Ship) LoadLocation(client storage.StorageClient) bool {
+func (ship *Ship) LoadLocation(client StorageClient) bool {
 	loc := &ShipLocation{ ShipID: ship.ID }
 	if !client.Get(loc) {
 		return false

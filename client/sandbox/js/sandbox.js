@@ -94,7 +94,7 @@ function addShip() {
         'o': 0x444444
     };
 
-    var ship = new CubeSet(30);
+    var ship = new CubeSet(10);
     ship.addAscii([
         ' o o ',
         ' o o ',

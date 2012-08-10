@@ -6,6 +6,7 @@ import (
 	"drift/accounts"
 	"drift/server"
 	"drift/endpoints"
+	"drift/sectors"
 
 	"flag"
 	"fmt"
@@ -29,6 +30,8 @@ func main() {
 		startServer()
 	case "emptybucket":
 		emptyBucket()
+	case "sandbox":
+		sandbox()
 	default:
 		fmt.Printf("Unknown command: %s\n", command)
 		os.Exit(2)
@@ -89,14 +92,22 @@ func emptyBucket() {
 	}
 }
 
-	// sector := sectors.SectorByCoords(0, 0)
-	// client.Get(sector)
-	// fmt.Printf("Sector: %s (%d, %d)\n", sector.Name, sector.Coords.X, sector.Coords.Y)
+func sandbox() {
+	var client = storage.NewRawRiakClient("http://localhost:8098")
 
-	// sector.LoadShips(client)
-	// sector.DumpShips()
-	// sector.Tick()
-	// sector.DumpShips()
+	var sector = sectors.SectorByCoords(0, 0)
+	client.Get(sector)
+	fmt.Printf("Sector: %s (%d, %d)\n", sector.Name, sector.Coords.X, sector.Coords.Y)
 
+	sector.LoadShips(client)
+
+	sector.DumpShips()
+
+	for i := 0; i < 100; i++ {
+		sector.Tick()
+		sector.DumpShips()
+	}
+
+}
 
 

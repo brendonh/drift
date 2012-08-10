@@ -1,14 +1,13 @@
 package ships
 
 import (
-	"drift/storage"
-	"drift/common"
+	. "drift/common"
 	"drift/simulation"
 )
 
 type ShipLocation struct {
 	ShipID string
-	Coords common.SectorCoords `indexed:"true"`
+	Coords SectorCoords `indexed:"true"`
 	Body *simulation.PoweredBody
 }
 
@@ -16,7 +15,7 @@ func (loc *ShipLocation) StorageKey() string {
 	return loc.ShipID
 }
 
-func (loc *ShipLocation) GetShip(client storage.StorageClient) *Ship {
+func (loc *ShipLocation) GetShip(client StorageClient) *Ship {
 	ship := &Ship{ ID: loc.ShipID }
 	ok := client.Get(ship)
 	if !ok {
