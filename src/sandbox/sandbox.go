@@ -15,7 +15,7 @@ import (
 
 func main() {
 	flag.Parse()
-	
+
 	if flag.NArg() == 0 {
 		fmt.Fprintf(os.Stderr, "usage: %s [command]\n", os.Args[0])
 		flag.PrintDefaults()
@@ -44,8 +44,8 @@ func startServer() {
 
 	var s = server.NewServer(client, serviceCollection)
 
-	httpRpc := endpoints.NewHttpRpcEndpoint(":9999", s)
-	s.AddEndpoint(httpRpc)		
+	s.AddEndpoint(endpoints.NewHttpRpcEndpoint(":9999", s))
+	s.AddEndpoint(endpoints.NewWebsocketEndpoint(":9998", s))
 
 	var stopper = make(chan os.Signal, 1)
 	signal.Notify(stopper)

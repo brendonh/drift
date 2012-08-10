@@ -68,6 +68,7 @@ var requestArgSpec = []APIArg {
 }
 
 func (collection ServiceCollection) HandleRequest(request APIData, context ServerContext) APIData {
+
 	ok, resolutionErrors, args := Parse(requestArgSpec, request)
 	if !ok {
 		return ErrorResponse(ListToStringSlice(resolutionErrors))

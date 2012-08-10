@@ -1,40 +1,18 @@
 package common
 
 
-type StorageClient interface {
-	GenerateID() string
-
-	Get(Storable) bool
-	Put(Storable) bool
-	IndexLookup(obj Storable, results interface{}, index string) bool
-
-	GetKey(bucket string, key string, target interface{}) bool
-	PutNew(bucket string, val interface{}) (string, bool)
-	PutKey(bucket string, key string, val interface{}) bool
-
-	Delete(bucket string, key string) bool
-	
-	Keys(bucket string) ([]string, bool)
-}
-
-
-type Storable interface {
-	StorageKey() string
-}
-
-
 // ------------------------------------------
 // Server
 // ------------------------------------------
 
-type Endpoint interface {
-	Start() bool
-	Stop() bool
-}
-
 type ServerContext interface {
 	Storage() StorageClient
 	API() API
+}
+
+type Endpoint interface {
+	Start() bool
+	Stop() bool
 }
 
 
@@ -70,6 +48,7 @@ type APIData map[string]interface{}
 type APIHandler func(APIData, ServerContext) (bool, APIData)
 
 
+
 // ------------------------------------------
 // Services
 // ------------------------------------------
@@ -85,3 +64,31 @@ type API interface {
 	HandleRequest(APIData, ServerContext) APIData
 	HandleCall(string, string, APIData, ServerContext) (bool, []string, APIData)
 }
+
+
+
+// ------------------------------------------
+// Storage
+// ------------------------------------------
+
+type StorageClient interface {
+	GenerateID() string
+
+	Get(Storable) bool
+	Put(Storable) bool
+	IndexLookup(obj Storable, results interface{}, index string) bool
+
+	GetKey(bucket string, key string, target interface{}) bool
+	PutNew(bucket string, val interface{}) (string, bool)
+	PutKey(bucket string, key string, val interface{}) bool
+
+	Delete(bucket string, key string) bool
+	
+	Keys(bucket string) ([]string, bool)
+}
+
+
+type Storable interface {
+	StorageKey() string
+}
+

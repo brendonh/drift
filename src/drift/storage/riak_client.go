@@ -86,13 +86,10 @@ func (client *RiakClient) Decode(content []byte, target interface{}) bool {
 
 	_, err := base64.StdEncoding.Decode(packed, content)
 
-	var temp interface{}
-	msgpack.Unmarshal(packed, &temp, nil)
-
 	err = msgpack.Unmarshal(packed, &target, nil)
 
 	if err != nil {
-		fmt.Printf("Decode err: %#v\n", err)
+		fmt.Printf("Decode err: %v\n", err)
 		return false
 	}
 

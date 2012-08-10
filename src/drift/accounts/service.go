@@ -5,6 +5,7 @@ import (
 	"drift/services"
 
 	"fmt"
+	"time"
 )
 
 // ------------------------------------------
@@ -28,6 +29,11 @@ func GetService() *services.Service {
 		    APIArg{Name: "password", ArgType: StringArg},
 	    },
 		method_login)
+
+	service.AddMethod(
+		"ping",
+		[]APIArg{},
+		method_ping)
 	
 	return service
 }
@@ -66,5 +72,14 @@ func method_login(args APIData, context ServerContext) (bool, APIData) {
 		return false, response
 	}
 
+	time.Sleep(2 * time.Second)
+
+	return true, response
+}
+
+
+func method_ping(args APIData, context ServerContext) (bool, APIData) {
+	var response = make(APIData)
+	response["message"] = "Pong"
 	return true, response
 }
