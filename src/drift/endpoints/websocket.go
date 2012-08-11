@@ -93,6 +93,7 @@ func (endpoint *WebsocketEndpoint) Handle(ws *websocket.Conn) {
 			if err != io.EOF {
 				fmt.Printf("WS error: %#v\n", err)
 			}
+			fmt.Printf("Session closed: %s\n", session.ID())
 			break
 		}
 
