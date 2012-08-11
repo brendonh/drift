@@ -17,24 +17,43 @@ function startSocket(url) {
     socket.onopen = function() {
         console.log("Connected!");
 
-        var login = {
-            'service': 'accounts',
-            'method': 'login',
-            'data': {
-                'name': 'brendonh',
-                'password': 'test'
-            }
-        }
-
         var ping = {
             'service': 'accounts',
             'method': 'ping',
             'data': {}
         }
 
-        sendAPICall(ping, socket)
+        var login = {
+            'service': 'accounts',
+            'method': 'login',
+            'data': {
+                'name': 'other',
+                'password': 'test'
+            }
+        }
+
+        var ships = {
+            'service': 'ships',
+            'method': 'list',
+            'data': {}
+        }
+
         sendAPICall(login, socket)
-        sendAPICall(ping, socket)
+
+        // Temp until we have callbacks
+        setTimeout(
+            function() {
+                // sendAPICall({"service": "ships",
+                //              "method": "create",
+                //              "data": { "name": "Sparky" }},
+                //            socket)
+                //sendAPICall(ships, socket)
+                sendAPICall(
+                    {"service": "ships",
+                     "method": "control",
+                     "data": { "id": "d4e15abf-bf62-4bae-bf88-ce63026ded41"}},
+                    socket)
+            }, 500)
 
     }
 

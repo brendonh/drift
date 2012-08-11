@@ -78,8 +78,11 @@ func (endpoint *HttpRpcEndpoint) ServeHTTP(response http.ResponseWriter, req *ht
 		form[k] = v[0]
 	}
 
+	// XXX TODO: Session tracking
+	var session = NewEndpointSession()
+
 	ok, errors, resp := endpoint.context.API().HandleCall(
-		bits[0], bits[1], form, endpoint.context)
+		bits[0], bits[1], form, session, endpoint.context)
 
 	if errors != nil {
 		response.WriteHeader(400)

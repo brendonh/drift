@@ -11,6 +11,7 @@ type Ship struct {
 	Location *ShipLocation `msgpack:"-"`
 }
 
+// Storage API
 func (ship *Ship) StorageKey() string {
 	return ship.ID
 }
@@ -20,7 +21,8 @@ func NewShip(id string, owner string, name string) *Ship {
 }
 
 
-func CreateShip(owner string, name string, client StorageClient) (*Ship, bool) {	
+func CreateShip(owner string, name string, context ServerContext) (*Ship, bool) {	
+	var client = context.Storage()
 	var id = client.GenerateID()
 	ship := NewShip(id, owner, name)
 	if !client.Put(ship) {

@@ -16,6 +16,35 @@ type Endpoint interface {
 }
 
 
+// ------------------------------------------
+// Users and sessions
+// ------------------------------------------
+
+type User interface {
+	ID() string
+	DisplayName() string
+}
+
+type Session interface {
+	ID() string
+	User() User
+	Avatar() Entity
+
+	Lock()
+	Unlock()
+
+	SetUser(User)
+	SetAvatar(Entity)
+}
+
+
+// ------------------------------------------
+// Entities
+// ------------------------------------------
+
+type Entity interface {
+}
+
 
 // ------------------------------------------
 // API
@@ -45,7 +74,7 @@ type APIMethod struct {
 
 type APIData map[string]interface{}
 
-type APIHandler func(APIData, ServerContext) (bool, APIData)
+type APIHandler func(APIData, Session, ServerContext) (bool, APIData)
 
 
 
@@ -61,8 +90,8 @@ type APIService interface {
 
 type API interface {
 	AddService(APIService)
-	HandleRequest(APIData, ServerContext) APIData
-	HandleCall(string, string, APIData, ServerContext) (bool, []string, APIData)
+	HandleRequest(APIData, Session, ServerContext) APIData
+	HandleCall(string, string, APIData, Session, ServerContext) (bool, []string, APIData)
 }
 
 

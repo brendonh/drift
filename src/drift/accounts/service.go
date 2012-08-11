@@ -5,7 +5,6 @@ import (
 	"drift/services"
 
 	"fmt"
-	"time"
 )
 
 // ------------------------------------------
@@ -39,7 +38,7 @@ func GetService() *services.Service {
 }
 
 
-func method_register(args APIData, context ServerContext) (bool, APIData) {
+func method_register(args APIData, session Session, context ServerContext) (bool, APIData) {
 	var response = make(APIData)
 
 	account, ok := CreateAccount(
@@ -60,25 +59,33 @@ func method_register(args APIData, context ServerContext) (bool, APIData) {
 }
 
 
-func method_login(args APIData, context ServerContext) (bool, APIData) {
+func method_login(args APIData, session Session, context ServerContext) (bool, APIData) {
 	var response = make(APIData)
+
+	session.Lock()
+	defer session.Unlock()
+
+	if session.User() != nil {
+		response["message"] = "Already logged in"
+		return false, response
+	}
 
 	var client = context.Storage()
 
-	var account = Account{Name: args["name"].(string)}
+	var account = &Account{Name: args["name"].(string)}
 
-	if !client.Get(&account) || !account.CheckPassword(args["password"].(string)) {
+	if !client.Get(account) || !account.CheckPassword(args["password"].(string)) {
 		response["message"] = "Invalid credentials"
 		return false, response
 	}
 
-	time.Sleep(2 * time.Second)
+	session.SetUser(account)
 
 	return true, response
 }
 
 
-func method_ping(args APIData, context ServerContext) (bool, APIData) {
+func method_ping(args APIData, session Session, context ServerContext) (bool, APIData) {
 	var response = make(APIData)
 	response["message"] = "Pong"
 	return true, response

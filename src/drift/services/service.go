@@ -67,7 +67,7 @@ var requestArgSpec = []APIArg {
 	APIArg{Name: "data", ArgType: RawArg},
 }
 
-func (collection ServiceCollection) HandleRequest(request APIData, context ServerContext) APIData {
+func (collection ServiceCollection) HandleRequest(request APIData, session Session, context ServerContext) APIData {
 
 	ok, resolutionErrors, args := Parse(requestArgSpec, request)
 	if !ok {
@@ -78,7 +78,7 @@ func (collection ServiceCollection) HandleRequest(request APIData, context Serve
 		args["service"].(string), 
 		args["method"].(string),
 		args["data"].(APIData),
-		context))
+		session, context))
 
 }
 
@@ -86,6 +86,7 @@ func (collection ServiceCollection) HandleCall(
 	serviceName string, 
 	methodName string,
 	data APIData,
+	session Session,
 	context ServerContext) (bool, []string, APIData) {
 
 
@@ -104,7 +105,7 @@ func (collection ServiceCollection) HandleCall(
 		return false, ListToStringSlice(errors), nil
 	}
 
-	ok, response := method.Handler(args, context)
+	ok, response := method.Handler(args, session, context)
 	if !ok {
 		return false, nil, response
 	}

@@ -7,6 +7,7 @@ import (
 	"drift/server"
 	"drift/endpoints"
 	"drift/sectors"
+	"drift/ships"
 
 	"flag"
 	"fmt"
@@ -44,6 +45,7 @@ func startServer() {
 
 	serviceCollection := services.NewServiceCollection()
 	serviceCollection.AddService(accounts.GetService())
+	serviceCollection.AddService(ships.GetService())
 
 	var s = server.NewServer(client, serviceCollection)
 

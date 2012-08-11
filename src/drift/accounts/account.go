@@ -11,8 +11,28 @@ type Account struct {
 	Admin bool
 }
 
+// Storage API
 func (account *Account) StorageKey() string {
 	return account.Name
+}
+
+// User API
+func (account *Account) DisplayName() string {
+	return account.Name
+}
+
+// User API
+func (account *Account) ID() string {
+	return account.Name
+}
+
+
+
+func (account *Account) CheckPassword(given string) bool {
+	var err = bcrypt.CompareHashAndPassword(
+		account.PasswordHash,
+		[]byte(given))
+	return err == nil
 }
 
 
@@ -38,11 +58,5 @@ func CreateAccount(name string, password string, context ServerContext) (*Accoun
 }
 
 
-func (account *Account) CheckPassword(given string) bool {
-	var err = bcrypt.CompareHashAndPassword(
-		account.PasswordHash,
-		[]byte(given))
-	return err == nil
-}
 
 

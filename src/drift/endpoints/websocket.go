@@ -81,6 +81,9 @@ func (endpoint *WebsocketEndpoint) Handle(ws *websocket.Conn) {
 	ws.PayloadType = websocket.BinaryFrame
 
 	var buf = make([]byte, 1024 * 64)
+	var session Session = NewEndpointSession()
+
+	fmt.Printf("New session: %s\n", session.ID())
 
 	for {
 
@@ -102,7 +105,7 @@ func (endpoint *WebsocketEndpoint) Handle(ws *websocket.Conn) {
 
 		switch buf[0] {
 		case APIFrame:
-			go endpoint.HandleAPI(msgBuf, ws)
+			go endpoint.HandleAPI(msgBuf, session, ws)
 		case PositionFrame:
 			fmt.Printf("Position frame: %v\n", msgBuf)
 		default:
@@ -112,7 +115,7 @@ func (endpoint *WebsocketEndpoint) Handle(ws *websocket.Conn) {
 }
 
 
-func (endpoint *WebsocketEndpoint) HandleAPI(buf []byte, ws *websocket.Conn) {
+func (endpoint *WebsocketEndpoint) HandleAPI(buf []byte, session Session, ws *websocket.Conn) {
 	var data APIData
 	var resolver = msgpack.DefaultDecoderContainerResolver
 	resolver.MapType = reflect.TypeOf(make(APIData))
@@ -126,7 +129,7 @@ func (endpoint *WebsocketEndpoint) HandleAPI(buf []byte, ws *websocket.Conn) {
 		return
 	}
 
-	var response = endpoint.context.API().HandleRequest(data, endpoint.context)
+	var response = endpoint.context.API().HandleRequest(data, session, endpoint.context)
 
 	if id, ok := data["id"]; ok {
 		response["id"] = id
