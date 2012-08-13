@@ -218,7 +218,7 @@ func (client *RiakClient) IndexLookup(obj Storable, results interface{}, index s
 	if err != nil {
 		fmt.Printf("Err: %s\n", err)
 		return false
-	} 
+	}
 
 	if resp.StatusCode != 200 {
 		fmt.Printf("Status: %d\n", resp.StatusCode)

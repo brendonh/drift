@@ -3,11 +3,12 @@ package sectors
 import (
 	. "drift/common"
 	"drift/ships"
+	"drift/simulation"
 	
 	"fmt"
+	"time"
 
 	. "github.com/klkblake/s3dm"
-	
 )
 
 
@@ -16,40 +17,105 @@ type ShipMap map[string]*ships.Ship
 type Sector struct {
 	Coords SectorCoords
 	Name string
-	ShipsByID ShipMap `msgpack:"-"`
+
+	ShipsByID ShipMap         `msgpack:"-"`
+	manager *SectorManager    `msgpack:"-"`
+	chanStop chan int         `msgpack:"-"`
+	chanTick <-chan time.Time `msgpack:"-"`
+	bodies [1000]simulation.PoweredBody
 }
 
 func (sector *Sector) StorageKey() string {
-	return fmt.Sprintf("%d:%d", sector.Coords.X, sector.Coords.Y)
+	return sector.Coords.String()
 }
 
-func SectorByCoords(x int, y int) *Sector {
+func SectorByCoords(x int, y int, manager *SectorManager) *Sector {
 	return &Sector{
 		Coords: SectorCoords{X: x, Y: y},
 		ShipsByID: make(ShipMap),
+
+		manager: manager,
+		chanStop: make(chan int, 0),
 	}
 }
 
-func (sector *Sector) LoadShips(client StorageClient) {	
+func (sector *Sector) Start() {
+	sector.loadShips()
+	//sector.DumpShips()
+	sector.chanTick = time.Tick(time.Duration(TICK_DELTA) * time.Millisecond)
+	go sector.loop()
+}
+
+func (sector *Sector) Stop() {
+	sector.chanStop <- 1
+	<- sector.chanStop
+}
+
+func (sector *Sector) loop() {
+	fmt.Printf("Sector started: %s\n", sector.Coords.String())
+	for {
+		select {
+		case <-sector.chanStop:
+			fmt.Printf("Sector stopping %s\n", sector.Coords.String())
+			sector.chanStop <- 1
+			break
+		case <-sector.chanTick:
+			var start = time.Now()
+			sector.tick()
+			fmt.Printf("Tick: %v\n", time.Since(start))
+			//sector.DumpShips()
+		}
+	}
+}
+
+
+func (sector *Sector) loadShips() {	
+	var client = sector.manager.context.Storage()
+
 	searchLoc := &ships.ShipLocation{ Coords: sector.Coords }
 	foundLocs := make([]ships.ShipLocation, 0)
 	client.IndexLookup(searchLoc, &foundLocs, "Coords")
 
-	for _, loc := range foundLocs {
+	fmt.Printf("Found %d ships\n", len(foundLocs))
+
+	for i := range foundLocs {
+		var loc = foundLocs[i]
 		ship := loc.GetShip(client)
+		fmt.Printf("Loaded ship '%s'\n", ship.Name)
 		sector.ShipsByID[ship.ID] = ship
-		ship.Location.Body.Velocity = V3{0, 0, 0}
-		ship.Location.Body.Spin = AxisAngle(V3{0, 0, 1}, 0.1)
+
+		sector.bodies[i] = *ship.Location.Body
+		ship.Location.Body = &sector.bodies[i]
+
+		// if i > 10 {
+		// 	break
+		// }
 	}
+
+	//sector.DumpShips()
 }
 
-func (sector *Sector) Tick() {
+func (sector *Sector) tick() {
 	for _, ship := range sector.ShipsByID {
 		var pos = ship.Location.Body
-		pos = pos.RK4Integrate(TICK_DELTA)
+		pos = pos.RK4Integrate(1.0)
 		ship.Location.Body = pos
 	}
+	// var i1 = make(chan int)
+	// var i2 = make(chan int)
+	// go sector.tickRange(0, 500, i1)
+	// go sector.tickRange(500, 1000, i2)
+	// <-i1
+	// <-i2
 }
+
+// func (sector *Sector) tickRange(start int, stop int, doneChan chan int) {
+// 	for i := start; i < stop; i++ {
+// 		sector.bodies[i] = *sector.bodies[i].RK4Integrate(1.0)
+// 	}
+// 	doneChan <- 1
+// }
+
 
 func prettyV3(vec V3) string {
 	return fmt.Sprintf("<%.2f, %.2f, %.2f>", vec.X, vec.Y, vec.Z)

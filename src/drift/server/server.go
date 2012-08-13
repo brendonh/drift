@@ -2,6 +2,7 @@ package server
 
 import (
 	. "drift/common"
+	"drift/sectors"
 
 	"os"
 )
@@ -11,6 +12,8 @@ type Server struct {
 	storage StorageClient
 	services API
 	endpoints []Endpoint
+
+	SectorManager *sectors.SectorManager
 	
 	stopper chan os.Signal
 }
@@ -20,11 +23,15 @@ func NewServer(
 	storage StorageClient, 
 	services API) *Server {
 
-	return &Server {
+	var server = &Server {
 		storage: storage,
 		services: services,
 		endpoints: make([]Endpoint, 0),
 	}
+
+	server.SectorManager = sectors.NewSectorManager(server)
+	return server
+
 }
 
 func (server *Server) AddEndpoint(endpoint Endpoint) {
@@ -41,6 +48,7 @@ func (server *Server) Stop() {
 	for _, endpoint := range server.endpoints {
 		endpoint.Stop()
 	}
+	server.SectorManager.Stop()
 }
 
 

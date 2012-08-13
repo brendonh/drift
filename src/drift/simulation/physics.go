@@ -39,38 +39,37 @@ func QAdd(q1 Qtrnn, q2 Qtrnn) Qtrnn {
 	return Qtrnn{q1.X + q2.X, q1.Y + q2.Y, q1.Z + q2.Z, q1.W + q2.W}
 }
 
-func (p *PoweredBody) RK4Evaluate(dt float64, derivativeIn *derivative) *derivative {
-	var np *PoweredBody = &PoweredBody{
-		Position: p.Position.Add(derivativeIn.Velocity.Muls(dt)),
-		Velocity: p.Velocity.Add(derivativeIn.Acceleration.Muls(dt)),
-    	Thrust: p.Thrust.Rotate(QMuls(derivativeIn.Spin, dt)),
+func (p *PoweredBody) RK4Evaluate(dt float64, dIn *derivative, dOut *derivative) {
+	var np PoweredBody = PoweredBody{
+		Position: p.Position.Add(dIn.Velocity.Muls(dt)),
+		Velocity: p.Velocity.Add(dIn.Acceleration.Muls(dt)),
+    	Thrust: p.Thrust.Rotate(QMuls(dIn.Spin, dt)),
 		Spin: p.Spin,
 	}
 
-	var derivativeOut = &derivative {
-		Velocity: np.Velocity,
-		Acceleration: np.Acceleration().Muls(dt),
-		Spin: np.Spin,
-	}
-	return derivativeOut
+	dOut.Velocity = np.Velocity
+	dOut.Acceleration = np.Acceleration().Muls(dt)
+	dOut.Spin = np.Spin
 }
 
 func (p *PoweredBody) RK4Integrate(dt float64) *PoweredBody {
-	var a = p.RK4Evaluate(0.0, &derivative{})
-	var b = p.RK4Evaluate(dt * 0.5, a)
-	var c = p.RK4Evaluate(dt * 0.5, b)
-	var d = p.RK4Evaluate(dt, c)
+	var ds = [5]derivative{}
 
-	var dPosition = a.Velocity.Add(
-		b.Velocity.Add(c.Velocity).Muls(2.0).Add(d.Velocity).Muls(
+	p.RK4Evaluate(0.0,      &ds[0], &ds[1])
+	p.RK4Evaluate(dt * 0.5, &ds[1], &ds[2])
+	p.RK4Evaluate(dt * 0.5, &ds[2], &ds[3])
+	p.RK4Evaluate(dt,       &ds[3], &ds[4])
+
+	var dPosition = ds[1].Velocity.Add(
+		ds[2].Velocity.Add(ds[3].Velocity).Muls(2.0).Add(ds[4].Velocity).Muls(
 		1.0 / 6.0))
 
-	var dVelocity = a.Acceleration.Add(
-		b.Acceleration.Add(c.Acceleration).Muls(2.0).Add(d.Acceleration)).Muls(
+	var dVelocity = ds[1].Acceleration.Add(
+		ds[2].Acceleration.Add(ds[3].Acceleration).Muls(2.0).Add(ds[4].Acceleration)).Muls(
 		1.0 / 6.0)
 
-	var dThrust = QMuls(QAdd(a.Spin, 
-		QAdd(QMuls(QAdd(b.Spin, c.Spin), 2.0), d.Spin)), 
+	var dThrust = QMuls(QAdd(ds[1].Spin, 
+		QAdd(QMuls(QAdd(ds[2].Spin, ds[3].Spin), 2.0), ds[4].Spin)), 
 		1.0 / 6.0)
 
 	return &PoweredBody{
