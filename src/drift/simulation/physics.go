@@ -9,13 +9,13 @@ import (
 var MAX_SPEED_SQUARED = common.MAX_SPEED * common.MAX_SPEED
 
 type PoweredBody struct {
-	Position V3
-	Velocity V3
-	Thrust V3
-	Spin Qtrnn
+	Position V2
+	Velocity V2
+	Thrust V2
+	Spin V2
 }
 
-func (p *PoweredBody) Acceleration() V3 {
+func (p *PoweredBody) Acceleration() V2 {
 	var scale = p.Thrust.Dot(p.Velocity) / MAX_SPEED_SQUARED
 	return p.Thrust.Sub(p.Velocity.Muls(scale))
 }
@@ -26,24 +26,16 @@ func (p *PoweredBody) Acceleration() V3 {
 // ------------------------------------------
 
 type derivative struct {
-	Velocity V3
-	Acceleration V3
-	Spin Qtrnn
-}
-
-func QMuls (q Qtrnn, s float64) Qtrnn {
-	return Qtrnn{q.X * s, q.Y * s, q.Z * s, q.W * s}
-}
-
-func QAdd(q1 Qtrnn, q2 Qtrnn) Qtrnn {
-	return Qtrnn{q1.X + q2.X, q1.Y + q2.Y, q1.Z + q2.Z, q1.W + q2.W}
+	Velocity V2
+	Acceleration V2
+	Spin V2
 }
 
 func (p *PoweredBody) RK4Evaluate(dt float64, dIn *derivative, dOut *derivative) {
 	var np PoweredBody = PoweredBody{
 		Position: p.Position.Add(dIn.Velocity.Muls(dt)),
 		Velocity: p.Velocity.Add(dIn.Acceleration.Muls(dt)),
-    	Thrust: p.Thrust.Rotate(QMuls(dIn.Spin, dt)),
+    	Thrust: p.Thrust.Rotate(dIn.Spin.Muls(dt)),
 		Spin: p.Spin,
 	}
 
@@ -68,8 +60,8 @@ func (p *PoweredBody) RK4Integrate(dt float64) *PoweredBody {
 		ds[2].Acceleration.Add(ds[3].Acceleration).Muls(2.0).Add(ds[4].Acceleration)).Muls(
 		1.0 / 6.0)
 
-	var dThrust = QMuls(QAdd(ds[1].Spin, 
-		QAdd(QMuls(QAdd(ds[2].Spin, ds[3].Spin), 2.0), ds[4].Spin)), 
+	var dThrust = ds[1].Spin.Add(
+		ds[2].Spin.Add(ds[3].Spin).Muls(2.0).Add(ds[4].Spin)).Muls(
 		1.0 / 6.0)
 
 	return &PoweredBody{

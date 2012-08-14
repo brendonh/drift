@@ -16,8 +16,8 @@ import (
 	"os/signal"
 	"runtime"
 
+	"math"
 	"math/rand"
-	"github.com/klkblake/s3dm"
 )
 
 func main() {
@@ -141,7 +141,7 @@ func createShips() {
 		return
 	}
 
-	fmt.Printf("Sector: %v\n", sector)
+	fmt.Printf("Sector: %v\n", sector.Name)
 
 	var account = &accounts.Account{Name: "sandbox"}
 	ok = client.Get(account)
@@ -168,7 +168,12 @@ func createShips() {
 		body.Position.Y = float64(rand.Intn(1000))
 		body.Velocity.X = rand.Float64()
 		body.Velocity.Y = rand.Float64()
-		body.Spin = s3dm.AxisAngle(s3dm.V3{0, 0, 1}, rand.Float64())
+		body.Thrust.X = rand.Float64()
+		body.Thrust.Y = rand.Float64()
+
+		var rot = math.Pi / 20
+		body.Spin.X = math.Cos(rot)
+		body.Spin.Y = math.Sin(rot)
 
 		ship := ships.NewShip(id, account.ID(), name)
 		ship.Location = location

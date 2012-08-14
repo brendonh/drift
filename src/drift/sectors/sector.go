@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/klkblake/s3dm"
 )
 
 
@@ -63,7 +62,7 @@ func (sector *Sector) loop() {
 			var start = time.Now()
 			sector.tick()
 			fmt.Printf("Tick: %v\n", time.Since(start))
-			//sector.DumpShips()
+			sector.DumpShips()
 		}
 	}
 }
@@ -84,15 +83,12 @@ func (sector *Sector) loadShips() {
 		fmt.Printf("Loaded ship '%s'\n", ship.Name)
 		sector.ShipsByID[ship.ID] = ship
 
-		sector.bodies[i] = *ship.Location.Body
-		ship.Location.Body = &sector.bodies[i]
+		// sector.bodies[i] = *ship.Location.Body
+		// ship.Location.Body = &sector.bodies[i]
 
-		// if i > 10 {
-		// 	break
-		// }
 	}
 
-	//sector.DumpShips()
+	sector.DumpShips()
 }
 
 func (sector *Sector) tick() {
@@ -103,32 +99,27 @@ func (sector *Sector) tick() {
 	}
 	// var i1 = make(chan int)
 	// var i2 = make(chan int)
-	// go sector.tickRange(0, 500, i1)
+	//sector.tickRange(0, 1000)
 	// go sector.tickRange(500, 1000, i2)
 	// <-i1
 	// <-i2
 }
 
-// func (sector *Sector) tickRange(start int, stop int, doneChan chan int) {
-// 	for i := start; i < stop; i++ {
-// 		sector.bodies[i] = *sector.bodies[i].RK4Integrate(1.0)
-// 	}
-// 	doneChan <- 1
-// }
-
-
-func prettyV3(vec V3) string {
-	return fmt.Sprintf("<%.2f, %.2f, %.2f>", vec.X, vec.Y, vec.Z)
+func (sector *Sector) tickRange(start int, stop int) {
+	for i := start; i < stop; i++ {
+		sector.bodies[i] = *sector.bodies[i].RK4Integrate(1.0)
+	}
 }
+
 
 func (sector *Sector) DumpShips() {
 	fmt.Printf("Ships in %s %v:\n", sector.Name, sector.Coords)
 	for _, ship := range sector.ShipsByID {
 		fmt.Printf("   %s (%v, %v, %v, %v)\n", 
 			ship.ID, 
-			prettyV3(ship.Location.Body.Position),
-			prettyV3(ship.Location.Body.Velocity),
-			prettyV3(ship.Location.Body.Thrust),
-			ship.Location.Body.Spin)
+			ship.Location.Body.Position.String(),
+			ship.Location.Body.Velocity.String(),
+			ship.Location.Body.Thrust.String(),
+			ship.Location.Body.Spin.String())
 	}
 }
