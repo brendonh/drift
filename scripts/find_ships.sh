@@ -1,15 +1,20 @@
+# 998: gqFY0QPmoVnRA+c=
+# 999: gqFY0QPnoVnRA+c=
+
 DATA=$(cat <<EOF
 {
     "inputs": {
         "bucket": "ShipLocation",
         "index": "Coords_bin",
-        "key": "gqFYAKFZAA=="
+        "key": "gqFY0QPmoVnRA+c=",
+        "keep": "true"
     },
     "query": [
         {
             "map": {
-                "language": "javascript",
-                "source": "function(o) { return [o.values[0].data]; }"
+                "language": "erlang",
+                "module": "riak_kv_mapreduce",
+                "function": "map_object_value"
             }
         }
     ]

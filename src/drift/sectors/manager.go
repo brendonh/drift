@@ -28,7 +28,7 @@ func NewSectorManager(context ServerContext) *SectorManager {
 func (manager *SectorManager) Ensure(x int, y int) (*Sector, bool) {
 	manager.Mutex.Lock()
 	defer manager.Mutex.Unlock()
-
+	
 	var coords = SectorCoords{X: x, Y: y}
 	var key = coords.String()
 
@@ -45,6 +45,30 @@ func (manager *SectorManager) Ensure(x int, y int) (*Sector, bool) {
 	}
 	return sector, true
 }
+
+
+func (manager *SectorManager) Create(x int, y int, name string) (*Sector, bool) {
+	var coords = SectorCoords{X: x, Y: y}
+	var key = coords.String()
+
+	sector, ok := manager.Sectors[key]
+	if ok {
+		fmt.Printf("Sector exists %s\n", key)
+		return sector, false
+	}
+
+	sector = SectorByCoords(x, y, manager)
+	if manager.context.Storage().Get(sector) {
+		fmt.Printf("Sector exists: %d, %d\n", x, y);
+		return sector, false
+	}
+
+	sector.Name = name
+	manager.context.Storage().Put(sector)
+	return sector, true
+	
+}
+
 
 func (manager *SectorManager) Stop() {
 	for _, sector := range manager.Sectors {

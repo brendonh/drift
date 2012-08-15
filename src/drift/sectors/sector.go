@@ -7,7 +7,7 @@ import (
 	
 	"fmt"
 	"time"
-
+	"sync"
 )
 
 
@@ -62,7 +62,7 @@ func (sector *Sector) loop() {
 			var start = time.Now()
 			sector.tick()
 			fmt.Printf("Tick: %v\n", time.Since(start))
-			sector.DumpShips()
+			//sector.DumpShips()
 		}
 	}
 }
@@ -75,21 +75,51 @@ func (sector *Sector) loadShips() {
 	foundLocs := make([]ships.ShipLocation, 0)
 	client.IndexLookup(searchLoc, &foundLocs, "Coords")
 
-	fmt.Printf("Found %d ships\n", len(foundLocs))
+	var chunkSize = 32
+	var totalShips = len(foundLocs)
+	fmt.Printf("Loading %d ships...\n", totalShips)
 
-	for i := range foundLocs {
-		var loc = foundLocs[i]
-		ship := loc.GetShip(client)
-		fmt.Printf("Loaded ship '%s'\n", ship.Name)
-		sector.ShipsByID[ship.ID] = ship
+	var chunkAcks = make(chan int)
+	var hashMutex = new(sync.Mutex)
 
-		// sector.bodies[i] = *ship.Location.Body
-		// ship.Location.Body = &sector.bodies[i]
+	var chunks = 0
 
+	for chunk := 0; chunk <= totalShips / chunkSize; chunk++ {
+		var start = chunk * chunkSize
+		var end = (chunk + 1) * chunkSize
+
+		if end > totalShips {
+			end = totalShips
+		}
+
+		if end <= start {
+			break
+		}
+
+		go sector.loadShipChunk(foundLocs[start:end], client, hashMutex, chunkAcks)
+		chunks++;
 	}
 
-	sector.DumpShips()
+	for chunk := 0; chunk < chunks; chunk++ {
+		<-chunkAcks
+	}
+
+	//sector.DumpShips()
 }
+
+func (sector *Sector) loadShipChunk(locs []ships.ShipLocation, client StorageClient, mutex *sync.Mutex, done chan int) {
+	for i := range locs {
+		var loc = locs[i]
+		ship := loc.GetShip(client)
+		mutex.Lock()
+		sector.ShipsByID[ship.ID] = ship
+		mutex.Unlock()
+		// sector.bodies[i] = *ship.Location.Body
+		// ship.Location.Body = &sector.bodies[i]
+	}
+	done <- 1
+}
+
 
 func (sector *Sector) tick() {
 	for _, ship := range sector.ShipsByID {
@@ -113,7 +143,7 @@ func (sector *Sector) tickRange(start int, stop int) {
 
 
 func (sector *Sector) DumpShips() {
-	fmt.Printf("Ships in %s %v:\n", sector.Name, sector.Coords)
+	fmt.Printf("Ships in %s %v (%d):\n", sector.Name, sector.Coords, len(sector.ShipsByID))
 	for _, ship := range sector.ShipsByID {
 		fmt.Printf("   %s (%v, %v, %v, %v)\n", 
 			ship.ID, 

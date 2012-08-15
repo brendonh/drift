@@ -117,7 +117,8 @@ func sandbox() {
 	var server = buildServer()
 	var manager = server.SectorManager
 
-	manager.Ensure(999, 999)
+	manager.Ensure(998, 999)
+	
 
 	// client.Get(sector)
 	// fmt.Printf("Sector: %s (%d, %d)\n", sector.Name, sector.Coords.X, sector.Coords.Y)
@@ -134,11 +135,14 @@ func createShips() {
 
 	var manager = server.SectorManager
 
-	var sector, ok = manager.Ensure(999, 999)
+	var sector, ok = manager.Ensure(998, 999)
 
 	if !ok {
-		fmt.Printf("Sector load error\n")
-		return
+		sector, ok = manager.Create(998, 999, "Another")
+		if !ok {
+			fmt.Printf("Sector creation error\n")
+			return
+		}
 	}
 
 	fmt.Printf("Sector: %v\n", sector.Name)
@@ -153,7 +157,7 @@ func createShips() {
 
 	fmt.Printf("User: %v\n", account.Name)
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 5; i++ {
 		name := fmt.Sprintf("sandbox%03d", i)
 		var id = client.GenerateID()
 
