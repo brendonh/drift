@@ -13,11 +13,11 @@ import (
 
 type SectorManager struct {
 	Sectors map[string]*Sector
-	context ServerContext
+	context DriftServerContext
 	*sync.Mutex
 }
 
-func NewSectorManager(context ServerContext) *SectorManager {
+func NewSectorManager(context DriftServerContext) *SectorManager {
 	return &SectorManager {
 		Sectors: make(map[string]*Sector),
 		context: context,

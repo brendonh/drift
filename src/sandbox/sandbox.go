@@ -2,7 +2,6 @@ package main
 
 import (
 	"drift/storage"
-	"drift/services"
 	"drift/accounts"
 	"drift/endpoints"
 	_ "drift/sectors"
@@ -18,6 +17,8 @@ import (
 
 	"math"
 	"math/rand"
+
+	"github.com/brendonh/go-service"
 )
 
 func main() {
@@ -54,8 +55,11 @@ func startServer() {
 
 	var s = buildServer()
 
-	s.AddEndpoint(endpoints.NewHttpRpcEndpoint(":9999", s))
-	s.AddEndpoint(endpoints.NewWebsocketEndpoint(":9998", s))
+	s.AddEndpoint(goservice.NewHttpRpcEndpoint(":9999", s, nil))
+
+	var websocketEndpoint = goservice.NewWebsocketEndpoint(":9998", s)
+	websocketEndpoint.Handler = endpoints.DriftMessageHandler
+	s.AddEndpoint(websocketEndpoint)
 
 	var stopper = make(chan os.Signal, 1)
 	signal.Notify(stopper)
@@ -72,14 +76,14 @@ func startServer() {
 }
 
 
-func buildServer() *server.Server {
+func buildServer() *server.DriftServer {
 	var client = storage.NewRawRiakClient("http://localhost:8098")
 
-	serviceCollection := services.NewServiceCollection()
+	serviceCollection := goservice.NewServiceCollection()
 	serviceCollection.AddService(accounts.GetService())
 	serviceCollection.AddService(ships.GetService())
 
-	return server.NewServer(client, serviceCollection)
+	return server.NewDriftServer(client, serviceCollection)
 }
 
 

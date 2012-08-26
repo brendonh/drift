@@ -42,7 +42,7 @@ func NewAccount(name string, password string) *Account {
 }
 
 // XXX BGH TODO: Serialize to avoid Riak races
-func CreateAccount(name string, password string, context ServerContext) (*Account, bool) {
+func CreateAccount(name string, password string, context DriftServerContext) (*Account, bool) {
 	var client = context.Storage()
 
 	existing := &Account{Name: name}

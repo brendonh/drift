@@ -2,17 +2,18 @@ package accounts
 
 import (
 	. "drift/common"
-	"drift/services"
 
 	"fmt"
+
+	. "github.com/brendonh/go-service"
 )
 
 // ------------------------------------------
 // Service endpoints
 // ------------------------------------------
 
-func GetService() *services.Service {
-	service := services.NewService("accounts")
+func GetService() *Service {
+	service := NewService("accounts")
 	service.AddMethod(
 		"register",
 		[]APIArg{
@@ -39,12 +40,13 @@ func GetService() *services.Service {
 
 
 func method_register(args APIData, session Session, context ServerContext) (bool, APIData) {
+	var server = context.(DriftServerContext)
 	var response = make(APIData)
 
 	account, ok := CreateAccount(
 		args["name"].(string), 
 		args["password"].(string), 
-		context)
+		server)
 	
 	if !ok {
 		response["message"] = "User exists"
@@ -60,6 +62,7 @@ func method_register(args APIData, session Session, context ServerContext) (bool
 
 
 func method_login(args APIData, session Session, context ServerContext) (bool, APIData) {
+	var server = context.(DriftServerContext)
 	var response = make(APIData)
 
 	session.Lock()
@@ -70,7 +73,7 @@ func method_login(args APIData, session Session, context ServerContext) (bool, A
 		return false, response
 	}
 
-	var client = context.Storage()
+	var client = server.Storage()
 
 	var account = &Account{Name: args["name"].(string)}
 

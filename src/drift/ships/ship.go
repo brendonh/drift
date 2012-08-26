@@ -21,7 +21,7 @@ func NewShip(id string, owner string, name string) *Ship {
 }
 
 
-func CreateShip(owner string, name string, context ServerContext) (*Ship, bool) {	
+func CreateShip(owner string, name string, context DriftServerContext) (*Ship, bool) {	
 	var client = context.Storage()
 	var id = client.GenerateID()
 	ship := NewShip(id, owner, name)

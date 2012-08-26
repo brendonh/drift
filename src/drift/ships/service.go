@@ -2,15 +2,15 @@ package ships
 
 import (
 	. "drift/common"
-	"drift/services"
+	. "github.com/brendonh/go-service"
 )
 
 // ------------------------------------------
 // Service endpoints
 // ------------------------------------------
 
-func GetService() *services.Service {
-	service := services.NewService("ships")
+func GetService() *Service {
+	service := NewService("ships")
 	service.AddMethod(
 		"create",
 		[]APIArg{
@@ -44,7 +44,7 @@ func method_create(args APIData, session Session, context ServerContext) (bool, 
 		return false, response
 	}
 	
-	ship, ok := CreateShip(user.ID(), args["name"].(string), context)
+	ship, ok := CreateShip(user.ID(), args["name"].(string), context.(DriftServerContext))
 
 	if !ok {
 		return false, response
@@ -56,6 +56,7 @@ func method_create(args APIData, session Session, context ServerContext) (bool, 
 
 
 func method_register(args APIData, session Session, context ServerContext) (bool, APIData) {
+	var server = context.(DriftServerContext)
 	var response = make(APIData)
 
 	var user = session.User()
@@ -67,7 +68,7 @@ func method_register(args APIData, session Session, context ServerContext) (bool
 	
 	var ship = &Ship{ Owner: user.ID() }
 	var ships = make([]Ship, 0)
-	context.Storage().IndexLookup(ship, &ships, "Owner")
+	server.Storage().IndexLookup(ship, &ships, "Owner")
 
 	var shipInfo = make([]map[string]interface{}, len(ships))
 	for i, ship := range ships {
@@ -82,6 +83,7 @@ func method_register(args APIData, session Session, context ServerContext) (bool
 
 
 func method_control(args APIData, session Session, context ServerContext) (bool, APIData) {
+	var server = context.(DriftServerContext)
 	var response = make(APIData)
 
 	session.Lock()
@@ -95,7 +97,7 @@ func method_control(args APIData, session Session, context ServerContext) (bool,
 	}
 
 	var ship = &Ship{ ID: args["id"].(string) }
-	var ok = context.Storage().Get(ship)
+	var ok = server.Storage().Get(ship)
 	
 	if !ok {
 		response["message"] = "No such ship"
@@ -107,7 +109,7 @@ func method_control(args APIData, session Session, context ServerContext) (bool,
 		return false, response
 	}
 
-	session.SetAvatar(ship)
+	session.(DriftSession).SetAvatar(ship)
 
 	return true, response
 }

@@ -5,28 +5,30 @@ import (
 	"drift/sectors"
 
 	"os"
+
+	. "github.com/brendonh/go-service"
 )
 
 
-type Server struct {
-	storage StorageClient
-	services API
-	endpoints []Endpoint
+type DriftServer struct {
+	Server
 
+	storage StorageClient
 	SectorManager *sectors.SectorManager
-	
+
 	stopper chan os.Signal
 }
 
 
-func NewServer(
+func NewDriftServer(
 	storage StorageClient, 
-	services API) *Server {
+	services API) *DriftServer {
 
-	var server = &Server {
-		storage: storage,
-		services: services,
-		endpoints: make([]Endpoint, 0),
+	var server = &DriftServer {
+		*NewServer(services),
+		storage,
+		nil,
+		nil,
 	}
 
 	server.SectorManager = sectors.NewSectorManager(server)
@@ -34,32 +36,11 @@ func NewServer(
 
 }
 
-func (server *Server) AddEndpoint(endpoint Endpoint) {
-	server.endpoints = append(server.endpoints, endpoint)
-}
-
-func (server *Server) Start() {
-	for _, endpoint := range server.endpoints {
-		endpoint.Start()
-	}
-}
-
-func (server *Server) Stop() {
-	for _, endpoint := range server.endpoints {
-		endpoint.Stop()
-	}
-	server.SectorManager.Stop()
-}
-
 
 // ------------------------------------------
 // Context API
 // ------------------------------------------
 
-func (server *Server) Storage() StorageClient {
+func (server *DriftServer) Storage() StorageClient {
 	return server.storage
-}
-
-func (server *Server) API() API {
-	return server.services
 }
