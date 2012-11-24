@@ -43,4 +43,3 @@ func NewDriftServer(
 func (server *DriftServer) Storage() StorageClient {
 	return server.storage
 }
-

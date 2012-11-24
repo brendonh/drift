@@ -1,7 +1,10 @@
-package ships
+package services
 
 import (
 	. "drift/common"
+	"drift/server"
+	"drift/ships"
+
 	. "github.com/brendonh/go-service"
 )
 
@@ -9,8 +12,9 @@ import (
 // Service endpoints
 // ------------------------------------------
 
-func GetService() *Service {
+func GetShipService() *Service {
 	service := NewService("ships")
+
 	service.AddMethod(
 		"create",
 		[]APIArg{
@@ -21,20 +25,14 @@ func GetService() *Service {
 	service.AddMethod(
 		"list",
 		[]APIArg{},
-		method_register)
-
-	service.AddMethod(
-		"control",
-		[]APIArg{
-		  APIArg{Name: "id", ArgType: StringArg},
-	    },
-		method_control)
+		method_list)
 
 	return service
 }
 
 
 func method_create(args APIData, session Session, context ServerContext) (bool, APIData) {
+	var server = context.(*server.DriftServer)
 	var response = make(APIData)
 
 	var user = session.User()
@@ -43,19 +41,33 @@ func method_create(args APIData, session Session, context ServerContext) (bool, 
 		response["message"] = "Not logged in"
 		return false, response
 	}
-	
-	ship, ok := CreateShip(user.ID(), args["name"].(string), context.(DriftServerContext))
+
+	var client = server.Storage()
+	var id = client.GenerateID()
+	ship := ships.NewShip(id, user.ID(), args["name"].(string))
+
+	sector, ok := server.SectorManager.Ensure(0, 0)
 
 	if !ok {
+		response["message"] = "Home sector unavailable"
 		return false, response
 	}
 
+	if !client.Put(ship) {
+		response["message"] = "Couldn't save ship"
+		return false, response
+	}
+
+	sector.Warp(ship, true)
+
+	ship.SaveLocation(client)
+	
 	response["id"] = ship.ID
 	return true, response
 }
 
 
-func method_register(args APIData, session Session, context ServerContext) (bool, APIData) {
+func method_list(args APIData, session Session, context ServerContext) (bool, APIData) {
 	var server = context.(DriftServerContext)
 	var response = make(APIData)
 
@@ -66,8 +78,8 @@ func method_register(args APIData, session Session, context ServerContext) (bool
 		return false, response
 	}
 	
-	var ship = &Ship{ Owner: user.ID() }
-	var ships = make([]Ship, 0)
+	var ship = &ships.Ship{ Owner: user.ID() }
+	var ships = make([]ships.Ship, 0)
 	server.Storage().IndexLookup(ship, &ships, "Owner")
 
 	var shipInfo = make([]map[string]interface{}, len(ships))
@@ -75,41 +87,14 @@ func method_register(args APIData, session Session, context ServerContext) (bool
 		shipInfo[i] = make(map[string]interface{})
 		shipInfo[i]["id"] = ship.ID
 		shipInfo[i]["name"] = ship.Name
+		if ship.LoadLocation(server.Storage()) {
+			var sector = make(map[string]interface{})
+			sector["x"] = ship.Location.Coords.X
+			sector["y"] = ship.Location.Coords.Y
+			shipInfo[i]["sector"] = sector
+		}
 	}
 	response["ships"] = shipInfo
-
-	return true, response
-}
-
-
-func method_control(args APIData, session Session, context ServerContext) (bool, APIData) {
-	var server = context.(DriftServerContext)
-	var response = make(APIData)
-
-	session.Lock()
-	defer session.Unlock()
-
-	var user = session.User()
-	
-	if user == nil {
-		response["message"] = "Not logged in"
-		return false, response
-	}
-
-	var ship = &Ship{ ID: args["id"].(string) }
-	var ok = server.Storage().Get(ship)
-	
-	if !ok {
-		response["message"] = "No such ship"
-		return false, response
-	}
-
-	if ship.Owner != user.ID() {
-		response["message"] = "Not your ship"
-		return false, response
-	}
-
-	session.(DriftSession).SetAvatar(ship)
 
 	return true, response
 }

@@ -1,7 +1,8 @@
-package accounts
+package services
 
 import (
 	. "drift/common"
+	"drift/accounts"
 
 	"fmt"
 
@@ -12,7 +13,7 @@ import (
 // Service endpoints
 // ------------------------------------------
 
-func GetService() *Service {
+func GetAccountService() *Service {
 	service := NewService("accounts")
 	service.AddMethod(
 		"register",
@@ -43,7 +44,7 @@ func method_register(args APIData, session Session, context ServerContext) (bool
 	var server = context.(DriftServerContext)
 	var response = make(APIData)
 
-	account, ok := CreateAccount(
+	account, ok := accounts.CreateAccount(
 		args["name"].(string), 
 		args["password"].(string), 
 		server)
@@ -75,7 +76,7 @@ func method_login(args APIData, session Session, context ServerContext) (bool, A
 
 	var client = server.Storage()
 
-	var account = &Account{Name: args["name"].(string)}
+	var account = &accounts.Account{Name: args["name"].(string)}
 
 	if !client.Get(account) || !account.CheckPassword(args["password"].(string)) {
 		response["message"] = "Invalid credentials"

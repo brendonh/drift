@@ -77,8 +77,10 @@ require([
                     console.log("No ships :(");
                     server.callAPI("ships", "create", 
                                    {name: "Fluffy"}
-                                  ).done(function() {
-                                      afterLogin(server, response);
+                                  ).done(function(newShipResponse) {
+                                      var id = newShipResponse["data"]["id"];
+                                      console.log("Created ship", id)
+                                      chooseShip(server, id);
                                   });
                     return;
                 }
@@ -91,10 +93,11 @@ require([
     }
 
     function chooseShip(server, shipID) {
-        server.callAPI("ships", "control", {"id": shipID})
-            .done(function() {
-                afterShip(server, shipID);
-            });
+        server.callAPI("server", "control", {
+            "id": shipID
+        }).done(function() {
+            afterShip(server, shipID);
+        });
     }
 
     function afterShip(server, shipID) {

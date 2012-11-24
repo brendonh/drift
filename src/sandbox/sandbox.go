@@ -8,6 +8,7 @@ import (
 	"drift/ships"
 	"drift/server"
 	"drift/simulation"
+	"drift/services"
 
 	"flag"
 	"fmt"
@@ -83,8 +84,9 @@ func buildServer() *server.DriftServer {
 	var client = storage.NewRawRiakClient("http://localhost:8098")
 
 	serviceCollection := goservice.NewServiceCollection()
-	serviceCollection.AddService(accounts.GetService())
-	serviceCollection.AddService(ships.GetService())
+	serviceCollection.AddService(services.GetAccountService())
+	serviceCollection.AddService(services.GetSectorService())
+	serviceCollection.AddService(services.GetShipService())
 
 	return server.NewDriftServer(client, serviceCollection)
 }

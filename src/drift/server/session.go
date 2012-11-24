@@ -13,8 +13,9 @@ import (
 type ServerSession struct {
 	id string
 	user User
-	avatar Entity
+	endpoint Endpoint
 	*sync.Mutex
+	avatar Entity
 }
 
 // ------------------------------------------
@@ -34,6 +35,9 @@ func (session *ServerSession) SetUser(user User) {
 	session.user = user
 }
 
+func (session *ServerSession) Send(msg []byte) {
+	fmt.Printf("Session send: %s: %v\n", session.id, msg)
+}
 
 // ------------------------------------------
 // DriftSession API
@@ -50,11 +54,12 @@ func (session *ServerSession) Avatar() Entity {
 	return session.avatar
 }
 
-func ServerSessionCreator() Session {
+func ServerSessionCreator(endpoint Endpoint) Session {
 	return &ServerSession{
 		id: uuid.New(),
 		user: nil,
 		avatar: nil,
 		Mutex: new(sync.Mutex),
+		endpoint: endpoint,
 	}
 }
