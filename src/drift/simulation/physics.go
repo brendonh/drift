@@ -22,6 +22,20 @@ func (p *PoweredBody) Acceleration() V2 {
 
 
 // ------------------------------------------
+// Euler
+// ------------------------------------------
+
+func (p *PoweredBody) EulerIntegrate(dt float64) *PoweredBody {
+	return &PoweredBody {
+		Position: p.Position.Add(p.Velocity.Muls(dt)),
+		Velocity: p.Velocity.Add(p.Acceleration().Muls(dt)),
+    	Thrust: p.Thrust.Rotate(p.Spin.Muls(dt)),
+		Spin: p.Spin,
+	}
+}
+
+
+// ------------------------------------------
 // RK4
 // ------------------------------------------
 

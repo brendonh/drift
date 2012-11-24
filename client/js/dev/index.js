@@ -65,18 +65,32 @@ require([
 
     function afterLogin(server, response) {
         var shipID = getQueryVariable('ship');
-        if (!shipID) {
-            server.callAPI("ships" ,"list")
-                .done(function(shipResponse) {
-                    var ships = shipResponse["data"]["ships"];
-                    for (var i in ships) {
-                        var ship = ships[i];
-                        console.log(ship.name, ship.id);
-                    }
-                });
+        if (shipID) {
+            chooseShip(server, shipID);
             return;
         }
+         
+        server.callAPI("ships" ,"list")
+            .done(function(shipResponse) {
+                var ships = shipResponse["data"]["ships"];
+                if (!ships.length) {
+                    console.log("No ships :(");
+                    server.callAPI("ships", "create", 
+                                   {name: "Fluffy"}
+                                  ).done(function() {
+                                      afterLogin(server, response);
+                                  });
+                    return;
+                }
+                for (var i in ships) {
+                    var ship = ships[i];
+                    console.log(ship.name, ship.id);
+                }
+                chooseShip(server, ships[0].id);
+            });
+    }
 
+    function chooseShip(server, shipID) {
         server.callAPI("ships", "control", {"id": shipID})
             .done(function() {
                 afterShip(server, shipID);

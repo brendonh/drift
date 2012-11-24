@@ -7,7 +7,6 @@ import (
 	
 	"fmt"
 	"time"
-	"sync"
 )
 
 
@@ -52,17 +51,18 @@ func (sector *Sector) Stop() {
 
 func (sector *Sector) loop() {
 	fmt.Printf("Sector started: %s\n", sector.Coords.String())
+
 	for {
 		select {
 		case <-sector.chanStop:
 			fmt.Printf("Sector stopping %s\n", sector.Coords.String())
 			sector.chanStop <- 1
 			break
+
 		case <-sector.chanTick:
-			var start = time.Now()
+			//var start = time.Now()
 			sector.tick()
-			fmt.Printf("Tick: %v\n", time.Since(start))
-			//sector.DumpShips()
+			//fmt.Printf("Tick: %v\n", time.Since(start))
 		}
 	}
 }
@@ -78,9 +78,10 @@ func (sector *Sector) loadShips() {
 	var chunkSize = 32
 	var totalShips = len(foundLocs)
 	fmt.Printf("Loading %d ships...\n", totalShips)
+	var start = time.Now()
 
 	var chunkAcks = make(chan int)
-	var hashMutex = new(sync.Mutex)
+	var shipStream = make(chan *ships.Ship)
 
 	var chunks = 0
 
@@ -96,26 +97,33 @@ func (sector *Sector) loadShips() {
 			break
 		}
 
-		go sector.loadShipChunk(foundLocs[start:end], client, hashMutex, chunkAcks)
+		go sector.loadShipChunk(foundLocs[start:end], client, chunkAcks, shipStream)
 		chunks++;
 	}
 
-	for chunk := 0; chunk < chunks; chunk++ {
-		<-chunkAcks
+	var finishedChunks = 0
+	var shipsLoaded = 0
+	var ship *ships.Ship
+
+	for finishedChunks < chunks {
+		select {
+		case <-chunkAcks:
+			finishedChunks += 1
+		case ship = <-shipStream:
+			shipsLoaded += 1
+			sector.ShipsByID[ship.ID] = ship
+		}
 	}
 
-	//sector.DumpShips()
+	fmt.Printf("Loaded %d ships in %v\n", shipsLoaded, time.Since(start))
 }
 
-func (sector *Sector) loadShipChunk(locs []ships.ShipLocation, client StorageClient, mutex *sync.Mutex, done chan int) {
+func (sector *Sector) loadShipChunk(
+	locs []ships.ShipLocation, client StorageClient, 
+	done chan int, stream chan *ships.Ship) {
 	for i := range locs {
 		var loc = locs[i]
-		ship := loc.GetShip(client)
-		mutex.Lock()
-		sector.ShipsByID[ship.ID] = ship
-		mutex.Unlock()
-		// sector.bodies[i] = *ship.Location.Body
-		// ship.Location.Body = &sector.bodies[i]
+		stream <- loc.GetShip(client)
 	}
 	done <- 1
 }
@@ -124,20 +132,8 @@ func (sector *Sector) loadShipChunk(locs []ships.ShipLocation, client StorageCli
 func (sector *Sector) tick() {
 	for _, ship := range sector.ShipsByID {
 		var pos = ship.Location.Body
-		pos = pos.RK4Integrate(1.0)
+		pos = pos.EulerIntegrate(1.0)
 		ship.Location.Body = pos
-	}
-	// var i1 = make(chan int)
-	// var i2 = make(chan int)
-	//sector.tickRange(0, 1000)
-	// go sector.tickRange(500, 1000, i2)
-	// <-i1
-	// <-i2
-}
-
-func (sector *Sector) tickRange(start int, stop int) {
-	for i := start; i < stop; i++ {
-		sector.bodies[i] = *sector.bodies[i].RK4Integrate(1.0)
 	}
 }
 
@@ -145,11 +141,6 @@ func (sector *Sector) tickRange(start int, stop int) {
 func (sector *Sector) DumpShips() {
 	fmt.Printf("Ships in %s %v (%d):\n", sector.Name, sector.Coords, len(sector.ShipsByID))
 	for _, ship := range sector.ShipsByID {
-		fmt.Printf("   %s (%v, %v, %v, %v)\n", 
-			ship.ID, 
-			ship.Location.Body.Position.String(),
-			ship.Location.Body.Velocity.String(),
-			ship.Location.Body.Thrust.String(),
-			ship.Location.Body.Spin.String())
+		ship.Dump()
 	}
 }

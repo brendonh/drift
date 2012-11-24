@@ -65,14 +65,17 @@ func startServer() {
 	signal.Notify(stopper)
 
 	s.Start()
+	defer s.Stop()
 
-	s.SectorManager.Ensure(999, 999)
+	_, ok := s.SectorManager.Ensure(0, 0)
+	if !ok {
+		return
+	}
 
 	<-stopper
 	close(stopper)
 
 	fmt.Printf("Shutting down ...\n")
-	s.Stop()
 }
 
 

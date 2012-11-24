@@ -2,6 +2,8 @@ package ships
 
 import (
 	. "drift/common"
+
+	"fmt"
 )
 
 type Ship struct {
@@ -11,10 +13,25 @@ type Ship struct {
 	Location *ShipLocation `msgpack:"-"`
 }
 
+// ------------------------------------------
 // Storage API
+// ------------------------------------------
+
 func (ship *Ship) StorageKey() string {
 	return ship.ID
 }
+
+// ------------------------------------------
+// Entity API
+// ------------------------------------------
+
+func (ship *Ship) String() string {
+	return fmt.Sprintf("%s (%s)", ship.Name, ship.ID)
+}
+
+// ------------------------------------------
+// Implementation
+// ------------------------------------------
 
 func NewShip(id string, owner string, name string) *Ship {	
 	return &Ship{ID: id, Owner: owner, Name: name}
@@ -46,4 +63,14 @@ func (ship *Ship) LoadLocation(client StorageClient) bool {
 	}
 	ship.Location = loc
 	return true
+}
+
+func (ship *Ship) Dump() {
+	fmt.Printf("   %s (%s) (%v, %v, %v, %v)\n", 
+		ship.Name,
+		ship.ID, 
+		ship.Location.Body.Position.String(),
+		ship.Location.Body.Velocity.String(),
+		ship.Location.Body.Thrust.String(),
+		ship.Location.Body.Spin.String())
 }

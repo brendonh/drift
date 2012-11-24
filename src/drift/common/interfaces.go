@@ -30,6 +30,7 @@ type DriftSession interface {
 // ------------------------------------------
 
 type Entity interface {
+	String() string
 }
 
 

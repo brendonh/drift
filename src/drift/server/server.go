@@ -18,14 +18,14 @@ type DriftServer struct {
 
 	stopper chan os.Signal
 }
-
+	
 
 func NewDriftServer(
 	storage StorageClient, 
 	services API) *DriftServer {
 
 	var server = &DriftServer {
-		*NewServer(services),
+		*NewServer(services, ServerSessionCreator),
 		storage,
 		nil,
 		nil,
@@ -36,7 +36,6 @@ func NewDriftServer(
 
 }
 
-
 // ------------------------------------------
 // Context API
 // ------------------------------------------
@@ -44,3 +43,4 @@ func NewDriftServer(
 func (server *DriftServer) Storage() StorageClient {
 	return server.storage
 }
+
