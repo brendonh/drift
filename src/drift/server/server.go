@@ -1,19 +1,21 @@
 package server
 
 import (
-	. "drift/common"
 	"drift/sectors"
+	"drift/endpoints"
 
 	"os"
 
 	. "github.com/brendonh/go-service"
+	"github.com/brendonh/loge/src/loge"
 )
 
 
 type DriftServer struct {
 	Server
 
-	storage StorageClient
+	//storage StorageClient
+	db *loge.LogeDB
 	SectorManager *sectors.SectorManager
 
 	stopper chan os.Signal
@@ -21,12 +23,12 @@ type DriftServer struct {
 	
 
 func NewDriftServer(
-	storage StorageClient, 
+	db *loge.LogeDB, 
 	services API) *DriftServer {
 
 	var server = &DriftServer {
-		*NewServer(services, ServerSessionCreator),
-		storage,
+		*NewServer(services, endpoints.ServerSessionCreator),
+		db,
 		nil,
 		nil,
 	}
@@ -40,6 +42,6 @@ func NewDriftServer(
 // Context API
 // ------------------------------------------
 
-func (server *DriftServer) Storage() StorageClient {
-	return server.storage
+func (server *DriftServer) DB() *loge.LogeDB {
+	return server.db
 }

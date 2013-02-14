@@ -5,8 +5,8 @@ import (
 )
 
 type SectorCoords struct {
-	X int
-	Y int
+	X int64
+	Y int64
 }
 
 func (coords *SectorCoords) String() string {

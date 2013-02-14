@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	. "github.com/brendonh/go-service"
+	"github.com/brendonh/loge/src/loge"
 )
 
 // ------------------------------------------
@@ -74,11 +75,11 @@ func method_login(args APIData, session Session, context ServerContext) (bool, A
 		return false, response
 	}
 
-	var client = server.Storage()
+	var db = server.DB()
 
-	var account = &accounts.Account{Name: args["name"].(string)}
+	var account = db.ReadOne("account", args["name"].(loge.LogeKey)).(*accounts.Account)
 
-	if !client.Get(account) || !account.CheckPassword(args["password"].(string)) {
+	if account == nil || !account.CheckPassword(args["password"].(string)) {
 		response["message"] = "Invalid credentials"
 		return false, response
 	}

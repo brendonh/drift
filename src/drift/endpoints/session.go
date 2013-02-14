@@ -1,4 +1,4 @@
-package server
+package endpoints
 
 import (
 	. "drift/common"
@@ -13,9 +13,9 @@ import (
 type ServerSession struct {
 	id string
 	user User
-	endpoint Endpoint
 	*sync.Mutex
 	avatar Entity
+	connection SessionConnection
 }
 
 // ------------------------------------------
@@ -36,7 +36,12 @@ func (session *ServerSession) SetUser(user User) {
 }
 
 func (session *ServerSession) Send(msg []byte) {
-	fmt.Printf("Session send: %s: %v\n", session.id, msg)
+	fmt.Printf("Drift session send: %s: %v\n", session.id, msg)
+	session.connection.Send(msg)
+}
+
+func (session *ServerSession) String() string {
+	return fmt.Sprintf("%s<%s>", session.user.ID(), session.id)
 }
 
 // ------------------------------------------
@@ -54,12 +59,12 @@ func (session *ServerSession) Avatar() Entity {
 	return session.avatar
 }
 
-func ServerSessionCreator(endpoint Endpoint) Session {
+func ServerSessionCreator(conn SessionConnection) Session {
 	return &ServerSession{
 		id: uuid.New(),
 		user: nil,
 		avatar: nil,
 		Mutex: new(sync.Mutex),
-		endpoint: endpoint,
+		connection: conn,
 	}
 }

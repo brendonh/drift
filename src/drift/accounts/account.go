@@ -3,6 +3,7 @@ package accounts
 import (
 	. "drift/common"
 	"code.google.com/p/go.crypto/bcrypt"
+	"github.com/brendonh/loge/src/loge"
 )
 
 type Account struct {
@@ -41,20 +42,23 @@ func NewAccount(name string, password string) *Account {
 	return &Account{name, hash, false}
 }
 
-// XXX BGH TODO: Serialize to avoid Riak races
 func CreateAccount(name string, password string, context DriftServerContext) (*Account, bool) {
-	var client = context.Storage()
+	var db = context.DB()
+	var account *Account = NewAccount(name, password)
+	var success bool
 
-	existing := &Account{Name: name}
-	if client.Get(existing) {
-		return nil, false
-	}
+	db.Transact(func (t *loge.Transaction) {
+		if !t.Exists("account", loge.LogeKey(name)) {
+			t.Set("account", loge.LogeKey(name), account)
+			success = true
+		}
+	}, 0)
 
-	account := NewAccount(name, password)
-	if !client.Put(account) {
-		return nil, false
-	}
-	return account, true
+	if success {
+		return account, true
+	} 
+
+	return nil, false
 }
 
 

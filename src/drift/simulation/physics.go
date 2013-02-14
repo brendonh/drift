@@ -9,11 +9,19 @@ import (
 var MAX_SPEED_SQUARED = common.MAX_SPEED * common.MAX_SPEED
 
 type PoweredBody struct {
+	ShipID string
+	Coords common.SectorCoords `indexed:"true"`
 	Position V2
 	Velocity V2
 	Thrust V2
 	Spin V2
 }
+
+
+func (p *PoweredBody) StorageKey() string {
+	return p.ShipID
+}
+
 
 func (p *PoweredBody) Acceleration() V2 {
 	var scale = p.Thrust.Dot(p.Velocity) / MAX_SPEED_SQUARED
@@ -27,6 +35,7 @@ func (p *PoweredBody) Acceleration() V2 {
 
 func (p *PoweredBody) EulerIntegrate(dt float64) *PoweredBody {
 	return &PoweredBody {
+		ShipID: p.ShipID,
 		Position: p.Position.Add(p.Velocity.Muls(dt)),
 		Velocity: p.Velocity.Add(p.Acceleration().Muls(dt)),
     	Thrust: p.Thrust.Rotate(p.Spin.Muls(dt)),
@@ -79,6 +88,7 @@ func (p *PoweredBody) RK4Integrate(dt float64) *PoweredBody {
 		1.0 / 6.0)
 
 	return &PoweredBody{
+		ShipID: p.ShipID,
 		Position: p.Position.Add(dPosition),
 		Velocity: p.Velocity.Add(dVelocity),
 		Thrust: p.Thrust.Rotate(dThrust),

@@ -2,17 +2,18 @@ package sectors
 
 import (
 	"drift/ships"
+	"drift/endpoints"
+	"drift/control"
 
 	"fmt"
-	
-	"github.com/brendonh/go-service"
 )
 
 
 type ControlCommand struct {
-	User goservice.User
+	Session *endpoints.ServerSession
 	ShipID string
 	Join bool
+	Spec control.ControlSpec
 	Reply chan *ControlReply
 }
 
@@ -23,7 +24,7 @@ type ControlReply struct {
 
 func (control *ControlCommand) String() string {
 	return fmt.Sprintf("Control %v by %s of %s", 
-		control.Join, control.User.ID(), control.ShipID)
+		control.Join, control.Session.User().DisplayName(), control.ShipID)
 }
 
 // ---------------------------

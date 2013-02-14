@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/brendonh/go-service"
+	"github.com/brendonh/loge/src/loge"
 )
 
 // ------------------------------------------
@@ -10,7 +11,7 @@ import (
 
 type DriftServerContext interface {
 	goservice.ServerContext
-	Storage() StorageClient
+	DB() *loge.LogeDB
 }
 
 // ------------------------------------------
@@ -37,23 +38,6 @@ type Entity interface {
 // ------------------------------------------
 // Storage
 // ------------------------------------------
-
-type StorageClient interface {
-	GenerateID() string
-
-	Get(Storable) bool
-	Put(Storable) bool
-	IndexLookup(obj Storable, results interface{}, index string) bool
-
-	GetKey(bucket string, key string, target interface{}) bool
-	PutNew(bucket string, val interface{}) (string, bool)
-	PutKey(bucket string, key string, val interface{}) bool
-
-	Delete(bucket string, key string) bool
-	
-	Keys(bucket string) ([]string, bool)
-}
-
 
 type Storable interface {
 	StorageKey() string

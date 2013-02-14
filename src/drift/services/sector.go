@@ -2,11 +2,14 @@ package services
 
 import (
 	"drift/server"
-	"drift/ships"
+	"drift/endpoints"
+	"drift/control"
+	"drift/simulation"
 
 	"fmt"
 
 	. "github.com/brendonh/go-service"
+	"github.com/brendonh/loge/src/loge"
 )
 
 // ------------------------------------------
@@ -41,8 +44,9 @@ func method_control(args APIData, session Session, context ServerContext) (bool,
 		return false, response
 	}
 
-	var loc = &ships.ShipLocation{ ShipID: args["id"].(string) }
-	if !server.Storage().Get(loc) {
+	var db = server.DB()
+	var loc = db.ReadOne("shiplocation", args["id"].(loge.LogeKey)).(*simulation.PoweredBody)
+	if loc == nil {
 		response["message"] = "Ship not found"
 		return false, response
 	}
@@ -55,14 +59,19 @@ func method_control(args APIData, session Session, context ServerContext) (bool,
 		return false, response
 	}
 
-	ok, error := sector.Control(user, args["id"].(string), true)
-	
+	ok, error := sector.Control(
+		session.(*endpoints.ServerSession), 
+		args["id"].(string), 
+		true, control.ControlSpec(true))
+
 	if !ok {
 		response["message"] = error
 		return false, response
 	}
 
 	//session.(DriftSession).SetAvatar(ship)
+
+	//session.Send([]byte("Hello World"))
 
 	return true, response
 }

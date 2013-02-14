@@ -4,11 +4,11 @@ import (
 	. "drift/common"
 	"drift/ships"
 	"drift/simulation"
+	"drift/endpoints"
+	"drift/control"
 	
 	"fmt"
 	"time"
-
-	"github.com/brendonh/go-service"
 )
 
 
@@ -18,37 +18,36 @@ type Sector struct {
 	Coords SectorCoords
 	Name string
 
-	ShipsByID ShipMap         `msgpack:"-"`
-	ChanControl chan *ControlCommand `msgpack:"-"`
-	ChanWarp chan *WarpCommand `msgpack:"-"`
+	ShipsByID ShipMap         `spack:"ignore"`
+	Listeners *control.ListenerMap `spack:"ignore"`
 
-	manager *SectorManager    `msgpack:"-"`
-	chanStop chan int         `msgpack:"-"`
-	chanTick <-chan time.Time `msgpack:"-"`
+	manager *SectorManager    `spack:"ignore"`
 
-	bodies [1000]simulation.PoweredBody
+	chanStop chan int         `spack:"ignore"`
+	chanTick <-chan time.Time `spack:"ignore"`
+	chanControl chan *ControlCommand `spack:"ignore"`
+	chanWarp chan *WarpCommand `spack:"ignore"`
+
+	bodies [1000]simulation.PoweredBody `spack:"ignore"`
 }
 
 func (sector *Sector) StorageKey() string {
 	return sector.Coords.String()
 }
 
-func SectorByCoords(x int, y int, manager *SectorManager) *Sector {
-	return &Sector{
-		Coords: SectorCoords{X: x, Y: y},
-		ShipsByID: make(ShipMap),
-
-		manager: manager,
-		chanStop: make(chan int, 0),
-	}
+func (sector *Sector) Populate(manager *SectorManager) {
+	sector.ShipsByID = make(ShipMap)
+	sector.Listeners = control.NewListenerMap()
+	sector.manager = manager
+	sector.chanStop = make(chan int, 0)
 }
 
 func (sector *Sector) Start() {
-	sector.loadShips()
+	sector.LoadShips()
 	//sector.DumpShips()
 	sector.chanTick = time.Tick(time.Duration(TICK_DELTA) * time.Millisecond)
-	sector.ChanControl = make(chan *ControlCommand)
-	sector.ChanWarp = make(chan *WarpCommand)
+	sector.chanControl = make(chan *ControlCommand)
+	sector.chanWarp = make(chan *WarpCommand)
 	go sector.loop()
 }
 
@@ -57,16 +56,16 @@ func (sector *Sector) Stop() {
 	<- sector.chanStop
 }
 
-func (sector *Sector) Control(user goservice.User, shipID string, join bool) (bool, string) {
-	
+func (sector *Sector) Control(session *endpoints.ServerSession, shipID string, join bool, spec control.ControlSpec) (bool, string) {
 	var command = &ControlCommand{
-		User: user,
+		Session: session,
 		ShipID: shipID,
 		Join: join,
+		Spec: spec,
 		Reply: make(chan *ControlReply, 1),
 	}
 
-	sector.ChanControl <- command
+	sector.chanControl <- command
 
 	var reply = (<-command.Reply)
 	return reply.Success, reply.Error
@@ -79,7 +78,7 @@ func (sector *Sector) Warp(ship *ships.Ship, in bool) bool {
 		Reply: make(chan *WarpReply, 1),
 	}
 
-	sector.ChanWarp <- command
+	sector.chanWarp <- command
 	var reply = (<-command.Reply)
 	return reply.Success
 }

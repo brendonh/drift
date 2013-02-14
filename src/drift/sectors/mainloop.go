@@ -1,10 +1,10 @@
 package sectors
 
 import (
-	"drift/ships"
 	"drift/simulation"
 
 	"fmt"
+	"time"
 )
 
 func (sector *Sector) loop() {
@@ -18,14 +18,14 @@ func (sector *Sector) loop() {
 			break
 			
 		case <-sector.chanTick:
-			//var start = time.Now()
+			var start = time.Now()
 			sector.tick()
-			//fmt.Printf("Tick: %v\n", time.Since(start))
+			fmt.Printf("Tick: %v\n", time.Since(start))
 
-		case command := <-sector.ChanControl:
+		case command := <-sector.chanControl:
 			sector.control(command)
 
-		case command := <-sector.ChanWarp:
+		case command := <-sector.chanWarp:
 			sector.warp(command)
 		}
 	}
@@ -34,16 +34,14 @@ func (sector *Sector) loop() {
 
 func (sector *Sector) tick() {
 	for _, ship := range sector.ShipsByID {
-		var pos = ship.Location.Body
+		var pos = ship.Location
 		pos = pos.EulerIntegrate(1.0)
-		ship.Location.Body = pos
+		ship.Location = pos
 	}
 }
 
 
 func (sector *Sector) control(command *ControlCommand) {
-	fmt.Printf("%v\n", command)
-
 	var ship, ok = sector.ShipsByID[command.ShipID]
 	if !ok {
 		command.Reply <- &ControlReply {
@@ -53,13 +51,18 @@ func (sector *Sector) control(command *ControlCommand) {
 		return
 	}
 
-	if ship.Owner != command.User.ID() {
+	var user = command.Session.User()
+	if ship.Owner != user.ID() {
 		command.Reply <- &ControlReply {
 			Success: false,
 			Error: "Not your ship",
 		}
 		return
 	}
+
+	sector.Listeners.Set(ship, command.Session, command.Spec)
+
+	fmt.Printf("%s controlling %s (%v)\n", user.DisplayName(), ship.Name, command.Spec)
 
 	command.Reply <- &ControlReply {
 		Success: true,
@@ -73,13 +76,11 @@ func (sector *Sector) warp(command *WarpCommand) {
 	var ship = command.Ship
 
 	if ship.Location == nil {
-		ship.Location = &ships.ShipLocation {
+		ship.Location = &simulation.PoweredBody{
 			ShipID: ship.ID,
-			Body: new(simulation.PoweredBody),
+			Coords: sector.Coords,
 		}
 	}
-
-	ship.Location.Coords = sector.Coords
 
 	sector.ShipsByID[ship.ID] = ship
 

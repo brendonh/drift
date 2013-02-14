@@ -1,10 +1,11 @@
 # 998: gqFY0QPmoVnRA+c=
 # 999: gqFY0QPnoVnRA+c=
+# 0 0: 
 
 DATA=$(cat <<EOF
 {
     "inputs": {
-        "bucket": "ShipLocation",
+        "bucket": "PoweredBody",
         "index": "Coords_bin",
         "key": "gqFY0QPmoVnRA+c=",
         "keep": "true"

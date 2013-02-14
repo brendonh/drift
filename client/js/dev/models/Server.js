@@ -72,6 +72,8 @@ define([
                 } else {
                     console.log("Reply to unknown API call:", response);
                 }
+            } else {
+                console.log("Unknown packet:", dataViewToString(view));
             }
         },
      
@@ -118,6 +120,14 @@ define([
         }
 
     });
+
+    function dataViewToString(view) {
+        var out = "";
+        for (var i = 0; i < view.byteLength; i++) {
+            out += String.fromCharCode(view.getUint8(i));
+        }
+        return out;
+    }
 
     return Server;
 });
